@@ -79,6 +79,7 @@ import { db, auth } from './firebase';
 import { Command, Fabricante, Cliente, Ativo, DBUser } from './types';
 import { getInitialCommands } from './data/initialCommands';
 import Markdown from 'react-markdown';
+import { RichTextEditor } from './components/RichTextEditor';
 import { 
   FABRICANTES, 
   FABRICANTE_DETAILS, 
@@ -2936,8 +2937,6 @@ function UserForm({ onClose, initialData, clientes }: { onClose: () => void, ini
     </motion.div>
   );
 }
-
-import { RichTextEditor } from './components/RichTextEditor';
 
 function CommandForm({ onClose, user, initialData }: { onClose: () => void, user: User, initialData?: Command }) {
   const [formData, setFormData] = useState({
