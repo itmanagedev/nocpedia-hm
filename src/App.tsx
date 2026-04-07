@@ -1181,6 +1181,19 @@ export default function App() {
   };
 
   const AcessosView = () => {
+    const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['Servers', 'Web Applications', 'Network Assets', 'Network Topologia', 'Upstream e Downstream', 'Clientes B2B', 'Outros']));
+
+    const toggleCategory = (categoria: string) => {
+      setExpandedCategories(prev => {
+        const next = new Set(prev);
+        if (next.has(categoria)) next.delete(categoria);
+        else next.add(categoria);
+        return next;
+      });
+    };
+
+    const categories = ['Servers', 'Web Applications', 'Network Assets', 'Network Topologia', 'Upstream e Downstream', 'Clientes B2B', 'Outros'];
+
     return (
       <div className="flex-1 flex flex-col p-8 bg-zinc-950 overflow-y-auto">
         <div className="max-w-6xl w-full mx-auto space-y-8">
@@ -1260,7 +1273,7 @@ export default function App() {
                   </div>
 
                   {/* Grouped Assets */}
-                  {['Servers', 'Web Applications', 'Network Assets', 'Network Topologia', 'Upstream e Downstream', 'Clientes B2B', 'Outros'].map(categoria => {
+                  {categories.map(categoria => {
                     const ativosCategoria = ativos.filter(a => {
                       if (a.clienteId !== selectedCliente.id) return false;
                       if (a.categoriaAcesso !== categoria && (a.categoriaAcesso || categoria !== 'Outros')) return false;
@@ -1277,33 +1290,50 @@ export default function App() {
                     
                     if (ativosCategoria.length === 0) return null;
 
+                    const isExpanded = expandedCategories.has(categoria);
+
                     return (
                       <div key={categoria} className="space-y-4">
-                        <h4 className="text-lg font-bold text-emerald-500 flex items-center gap-2 border-b border-zinc-800 pb-2">
-                          {categoria === 'Servers' && <Server size={20} />}
-                          {categoria === 'Web Applications' && <Globe size={20} />}
-                          {categoria === 'Network Assets' && <Network size={20} />}
-                          {categoria === 'Network Topologia' && <Network size={20} />}
-                          {categoria === 'Upstream e Downstream' && <Network size={20} />}
-                          {categoria === 'Clientes B2B' && <Building2 size={20} />}
-                          {categoria === 'Outros' && <Box size={20} />}
-                          {categoria}
-                        </h4>
-                        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                          {ativosCategoria.map(ativo => (
-                            <AtivoCard 
-                              key={ativo.id} 
-                              ativo={ativo} 
-                              dbUser={dbUser} 
-                              onEdit={() => setEditingAtivo(ativo)} 
-                              onDelete={async () => {
-                                if (window.confirm('Excluir este acesso?')) {
-                                  await deleteDoc(doc(db, 'clientes', selectedCliente.id!, 'ativos', ativo.id!));
-                                }
-                              }} 
-                            />
-                          ))}
-                        </div>
+                        <button 
+                          onClick={() => toggleCategory(categoria)}
+                          className="w-full text-left flex items-center justify-between group"
+                        >
+                          <h4 className="text-lg font-bold text-emerald-500 flex items-center gap-2 border-b border-zinc-800 pb-2 flex-1">
+                            {categoria === 'Servers' && <Server size={20} />}
+                            {categoria === 'Web Applications' && <Globe size={20} />}
+                            {categoria === 'Network Assets' && <Network size={20} />}
+                            {categoria === 'Network Topologia' && <Network size={20} />}
+                            {categoria === 'Upstream e Downstream' && <Network size={20} />}
+                            {categoria === 'Clientes B2B' && <Building2 size={20} />}
+                            {categoria === 'Outros' && <Box size={20} />}
+                            {categoria}
+                          </h4>
+                          <div className="border-b border-zinc-800 pb-2 pl-4">
+                            {isExpanded ? <ChevronUp size={20} className="text-zinc-500 group-hover:text-emerald-500 transition-colors" /> : <ChevronDown size={20} className="text-zinc-500 group-hover:text-emerald-500 transition-colors" />}
+                          </div>
+                        </button>
+                        
+                        {isExpanded && (
+                          <motion.div 
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="grid grid-cols-1 xl:grid-cols-2 gap-4"
+                          >
+                            {ativosCategoria.map(ativo => (
+                              <AtivoCard 
+                                key={ativo.id} 
+                                ativo={ativo} 
+                                dbUser={dbUser} 
+                                onEdit={() => setEditingAtivo(ativo)} 
+                                onDelete={async () => {
+                                  if (window.confirm('Excluir este acesso?')) {
+                                    await deleteDoc(doc(db, 'clientes', selectedCliente.id!, 'ativos', ativo.id!));
+                                  }
+                                }} 
+                              />
+                            ))}
+                          </motion.div>
+                        )}
                       </div>
                     );
                   })}
@@ -1315,7 +1345,7 @@ export default function App() {
                   )}
                   
                   {ativos.filter(a => a.clienteId === selectedCliente.id).length > 0 && 
-                   !['Servers', 'Web Applications', 'Network Assets', 'Outros'].some(categoria => 
+                   !categories.some(categoria => 
                      ativos.some(a => a.clienteId === selectedCliente.id && (a.categoriaAcesso === categoria || (!a.categoriaAcesso && categoria === 'Outros')) &&
                      (!searchAtivoQuery || a.nome?.toLowerCase().includes(searchAtivoQuery.toLowerCase()) || a.tipo?.toLowerCase().includes(searchAtivoQuery.toLowerCase()) || a.fabricante?.toLowerCase().includes(searchAtivoQuery.toLowerCase()) || a.modelo?.toLowerCase().includes(searchAtivoQuery.toLowerCase())))
                    ) && (
