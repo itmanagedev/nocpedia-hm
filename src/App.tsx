@@ -73,6 +73,8 @@ import {
   GoogleAuthProvider, 
   onAuthStateChanged, 
   signOut,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
   User
 } from 'firebase/auth';
 import { db, auth } from './firebase';
@@ -551,7 +553,7 @@ export default function App() {
   const [isAdding, setIsAdding] = useState(false);
   const [editingCommand, setEditingCommand] = useState<Command | null>(null);
   const [selectedCommand, setSelectedCommand] = useState<Command | null>(null);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [currentView, setCurrentView] = useState<'home' | 'wiki' | 'acessos' | 'configuracoes'>('home');
   const [configTab, setConfigTab] = useState<'geral' | 'clientes' | 'usuarios'>('usuarios');
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -831,16 +833,42 @@ export default function App() {
     return () => { };
   }, []);
 
+  const [expandedSubgroups, setExpandedSubgroups] = useState<Set<string>>(new Set());
+
+  const toggleSubgroup = (subgroup: string) => {
+    setExpandedSubgroups(prev => {
+      const next = new Set(prev);
+      if (next.has(subgroup)) next.delete(subgroup);
+      else next.add(subgroup);
+      return next;
+    });
+  };
+
   const handleLogin = async () => {
     const provider = new GoogleAuthProvider();
     try {
       await signInWithPopup(auth, provider);
     } catch (error: any) {
-      if (error.code === 'auth/cancelled-popup-request') {
-        console.log("Login popup cancelled by user.");
-      } else {
-        console.error("Login error:", error);
-      }
+      console.error("Login error:", error);
+      alert("Erro ao fazer login com Google. Verifique se os popups estão permitidos.");
+    }
+  };
+
+  const handleEmailLogin = async (email: string, pass: string) => {
+    try {
+      await signInWithEmailAndPassword(auth, email, pass);
+    } catch (error: any) {
+      console.error("Email login error:", error);
+      alert("Erro ao fazer login: " + error.message);
+    }
+  };
+
+  const handleEmailSignUp = async (email: string, pass: string) => {
+    try {
+      await createUserWithEmailAndPassword(auth, email, pass);
+    } catch (error: any) {
+      console.error("Email signup error:", error);
+      alert("Erro ao criar conta: " + error.message);
     }
   };
 
@@ -1505,6 +1533,10 @@ export default function App() {
     );
   }
 
+  if (!user) {
+    return <LoginScreen onGoogleLogin={handleLogin} onEmailLogin={handleEmailLogin} onEmailSignUp={handleEmailSignUp} />;
+  }
+
   return (
     <div className="flex h-screen bg-zinc-950 text-zinc-100 overflow-hidden font-sans">
       {/* Sidebar */}
@@ -1806,22 +1838,44 @@ export default function App() {
             )}
 
             {groupedCommands ? (
-              Object.entries(groupedCommands).map(([category, cmds]) => (
-                <div key={category} className="mb-12">
-                  <h3 className="text-lg font-bold text-emerald-500 border-b border-zinc-800 pb-2 mb-6 flex items-center gap-2">
-                    {getCategoryIcon(category)} {category}
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6 4xl:grid-cols-8 gap-4">
-                    {cmds.map(cmd => (
-                      <CommandCard 
-                        key={cmd.id}
-                        cmd={cmd}
-                        onClick={() => setSelectedCommand(cmd)}
-                      />
-                    ))}
+              Object.entries(groupedCommands).map(([category, cmds]) => {
+                const isExpanded = expandedSubgroups.has(category);
+                return (
+                  <div key={category} className="mb-6">
+                    <button 
+                      onClick={() => toggleSubgroup(category)}
+                      className="w-full flex items-center justify-between text-lg font-bold text-emerald-500 border-b border-zinc-800 pb-2 mb-4 hover:bg-emerald-500/5 transition-colors group"
+                    >
+                      <div className="flex items-center gap-2">
+                        {getCategoryIcon(category)} {category}
+                        <span className="text-xs text-zinc-500 font-normal ml-2">({cmds.length})</span>
+                      </div>
+                      <ChevronDown size={20} className={`transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
+                    </button>
+                    
+                    <AnimatePresence>
+                      {isExpanded && (
+                        <motion.div 
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          className="overflow-hidden"
+                        >
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6 4xl:grid-cols-8 gap-4 pb-6">
+                            {cmds.map(cmd => (
+                              <CommandCard 
+                                key={cmd.id}
+                                cmd={cmd}
+                                onClick={() => setSelectedCommand(cmd)}
+                              />
+                            ))}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
-                </div>
-              ))
+                );
+              })
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6 4xl:grid-cols-8 gap-4">
                 {filteredCommands.map(cmd => (
@@ -3389,5 +3443,122 @@ function CommandDetails({ command, commands, isAdmin, setSelectedCommand, onClos
         </div>
       </motion.div>
     </motion.div>
+  );
+}
+
+function LoginScreen({ onGoogleLogin, onEmailLogin, onEmailSignUp }: { 
+  onGoogleLogin: () => void, 
+  onEmailLogin: (email: string, pass: string) => void,
+  onEmailSignUp: (email: string, pass: string) => void
+}) {
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isSignUp) {
+      onEmailSignUp(email, password);
+    } else {
+      onEmailLogin(email, password);
+    }
+  };
+
+  return (
+    <div className="flex flex-col items-center justify-center h-screen bg-zinc-950 text-white p-6 text-center overflow-y-auto">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="p-8 bg-emerald-500/10 rounded-full border border-emerald-500/20 shadow-[0_0_50px_-12px_rgba(16,185,129,0.3)] mb-8"
+      >
+        <Terminal size={80} className="text-emerald-500" />
+      </motion.div>
+      
+      <motion.h1 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="text-4xl font-bold mb-2 tracking-tight"
+      >
+        iT.Wiki
+      </motion.h1>
+      
+      <motion.p 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="text-zinc-400 mb-8 max-w-md"
+      >
+        Base de conhecimento técnica. Faça login para acessar.
+      </motion.p>
+
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+        className="w-full max-w-md bg-zinc-900 border border-zinc-800 p-8 rounded-3xl shadow-2xl space-y-6"
+      >
+        <form onSubmit={handleSubmit} className="space-y-4 text-left">
+          <div className="space-y-2">
+            <label className="text-xs font-bold uppercase tracking-widest text-zinc-500 flex items-center gap-2">
+              <Mail size={14} /> E-mail
+            </label>
+            <input 
+              type="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              placeholder="seu@email.com"
+              required
+              className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-500/50 transition-colors"
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-xs font-bold uppercase tracking-widest text-zinc-500 flex items-center gap-2">
+              <Key size={14} /> Senha
+            </label>
+            <input 
+              type="password"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              placeholder="••••••••"
+              required
+              className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-500/50 transition-colors"
+            />
+          </div>
+          <button 
+            type="submit"
+            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-2xl font-bold text-lg transition-all shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-2"
+          >
+            {isSignUp ? 'Criar Conta' : 'Entrar no Sistema'}
+            <ChevronRight size={20} />
+          </button>
+        </form>
+
+        <div className="flex flex-col gap-4">
+          <button 
+            onClick={() => setIsSignUp(!isSignUp)}
+            className="text-xs text-zinc-500 hover:text-zinc-300 uppercase tracking-widest font-bold transition-colors"
+          >
+            {isSignUp ? 'Já tem uma conta? Entrar' : 'Não tem uma conta? Criar Agora'}
+          </button>
+
+          <div className="relative py-4">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-zinc-800"></div>
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-zinc-900 px-2 text-zinc-500">Ou continue com</span>
+            </div>
+          </div>
+
+          <button 
+            onClick={onGoogleLogin}
+            className="w-full flex items-center justify-center gap-3 bg-zinc-800 hover:bg-zinc-700 text-white px-8 py-4 rounded-2xl text-base font-bold transition-all border border-zinc-700"
+          >
+            <Globe size={20} />
+            Google Login
+          </button>
+        </div>
+      </motion.div>
+    </div>
   );
 }
