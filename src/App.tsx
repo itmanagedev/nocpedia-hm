@@ -44,7 +44,10 @@ import {
   Plus as PlusIcon,
   X as XIcon,
   Save,
-  ArrowLeft
+  ArrowLeft,
+  Eye,
+  EyeOff,
+  ChevronUp
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -1007,6 +1010,176 @@ export default function App() {
     </div>
   );
 
+  const [searchAtivoQuery, setSearchAtivoQuery] = useState('');
+
+  const AtivoCard = ({ ativo, dbUser, onEdit, onDelete }: { ativo: Ativo, dbUser: DBUser | null, onEdit: () => void, onDelete: () => void }) => {
+    const [isExpanded, setIsExpanded] = useState(false);
+    const [visiblePasswords, setVisiblePasswords] = useState<Set<string>>(new Set());
+
+    const togglePassword = (field: string) => {
+      setVisiblePasswords(prev => {
+        const next = new Set(prev);
+        if (next.has(field)) next.delete(field);
+        else next.add(field);
+        return next;
+      });
+    };
+
+    const PasswordField = ({ label, value, fieldKey }: { label: string, value: string, fieldKey: string }) => {
+      if (!value) return null;
+      const isVisible = visiblePasswords.has(fieldKey);
+      return (
+        <div className="flex items-center justify-between bg-zinc-950 px-3 py-2 rounded-lg border border-zinc-800/50">
+          <span className="text-zinc-500 text-xs font-bold uppercase">{label}</span>
+          <div className="flex items-center gap-2">
+            <span className="text-zinc-300 font-mono text-xs">{isVisible ? value : '••••••••'}</span>
+            <button onClick={() => togglePassword(fieldKey)} className="text-zinc-500 hover:text-zinc-300">
+              {isVisible ? <EyeOff size={14} /> : <Eye size={14} />}
+            </button>
+          </div>
+        </div>
+      );
+    };
+
+    const TextField = ({ label, value }: { label: string, value?: string }) => {
+      if (!value) return null;
+      return (
+        <div className="flex items-center justify-between bg-zinc-950 px-3 py-2 rounded-lg border border-zinc-800/50">
+          <span className="text-zinc-500 text-xs font-bold uppercase">{label}</span>
+          <span className="text-zinc-300 font-mono text-xs">{value}</span>
+        </div>
+      );
+    };
+
+    return (
+      <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 hover:border-emerald-500/30 transition-colors group">
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-zinc-800 rounded-lg text-zinc-400">
+              {ativo.tipo === 'Router' || ativo.tipo === 'Switch' ? <Router size={20} /> : <Server size={20} />}
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h5 className="font-bold text-white">{ativo.nome}</h5>
+                {ativo.status && (
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${
+                    ativo.status === 'Ativo' ? 'bg-emerald-500/10 text-emerald-500' :
+                    ativo.status === 'Inativo' ? 'bg-red-500/10 text-red-500' :
+                    ativo.status === 'Manutenção' ? 'bg-amber-500/10 text-amber-500' :
+                    'bg-blue-500/10 text-blue-500'
+                  }`}>
+                    {ativo.status}
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-zinc-500">{ativo.fabricante} {ativo.modelo}</p>
+            </div>
+          </div>
+          {dbUser?.role !== 'viewer' && (
+            <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button onClick={onEdit} className="p-1.5 text-zinc-400 hover:text-white bg-zinc-800 rounded-md">
+                <EditIcon size={14} />
+              </button>
+              <button onClick={onDelete} className="p-1.5 text-zinc-400 hover:text-red-400 bg-zinc-800 rounded-md">
+                <TrashIcon size={14} />
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div className="space-y-2 text-sm">
+          <TextField label="Endereço" value={ativo.ipv4Hostname || ativo.urlFqdnDomain} />
+          <TextField label="SSH User" value={ativo.sshUser} />
+          <TextField label="Web User" value={ativo.otherUser} />
+          
+          {isExpanded && (
+            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="space-y-2 pt-2 border-t border-zinc-800 mt-2">
+              <PasswordField label="SSH Pass" value={ativo.sshPassword || ''} fieldKey="sshPassword" />
+              <PasswordField label="Web Pass" value={ativo.otherPassword || ''} fieldKey="otherPassword" />
+              <TextField label="Porta SSH" value={ativo.sshPort} />
+              <TextField label="Porta Web" value={ativo.otherPort} />
+              <TextField label="SNMP Community" value={ativo.snmpCommunity} />
+              <PasswordField label="Console Pass" value={ativo.consolePassword || ''} fieldKey="consolePassword" />
+              
+              {ativo.categoriaAcesso === 'Network Topologia' && (
+                <>
+                  {ativo.networkTopologyLink && (
+                    <div className="flex items-center justify-between bg-zinc-950 px-3 py-2 rounded-lg border border-zinc-800/50">
+                      <span className="text-zinc-500 text-xs font-bold uppercase">Link Topologia</span>
+                      <a href={ativo.networkTopologyLink} target="_blank" rel="noopener noreferrer" className="text-emerald-400 hover:text-emerald-300 text-xs underline">Acessar</a>
+                    </div>
+                  )}
+                  {ativo.networkTopologyFileName && (
+                    <div className="flex items-center justify-between bg-zinc-950 px-3 py-2 rounded-lg border border-zinc-800/50">
+                      <span className="text-zinc-500 text-xs font-bold uppercase">Arquivo</span>
+                      <span className="text-zinc-300 font-mono text-xs">{ativo.networkTopologyFileName}</span>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {ativo.categoriaAcesso === 'Upstream e Downstream' && (
+                <>
+                  <TextField label="Tipo Link" value={ativo.linkType} />
+                  <TextField label="ID Circuito" value={ativo.idCircuito} />
+                  <TextField label="Velocidade" value={ativo.velocidadeContratada} />
+                  <TextField label="Enlace IPv4" value={ativo.enlaceIpv4} />
+                  <TextField label="VLAN IPv4" value={ativo.idVlanIpv4} />
+                  <TextField label="Enlace IPv6" value={ativo.enlaceIpv6} />
+                  <TextField label="VLAN IPv6" value={ativo.idVlanIpv6} />
+                  <TextField label="Multihop" value={ativo.multihop} />
+                  <TextField label="Multihop IPv6" value={ativo.multihopIpv6} />
+                  <TextField label="Community Blackhole" value={ativo.communityBlackhole} />
+                  <TextField label="Endereço Abordagem" value={ativo.enderecoAbordagem} />
+                  <TextField label="Contato NOC" value={ativo.contatoNoc} />
+                  <TextField label="E-mail NOC" value={ativo.emailNoc} />
+                </>
+              )}
+
+              {ativo.categoriaAcesso === 'Clientes B2B' && (
+                <>
+                  <TextField label="ID Circuito" value={ativo.idCircuito} />
+                  <TextField label="Endereço" value={ativo.enderecoCliente} />
+                  <TextField label="Velocidade" value={ativo.velocidadeContratada} />
+                  <TextField label="Enlace IPv4" value={ativo.enlaceIpv4} />
+                  <TextField label="Enlace IPv6" value={ativo.enlaceIpv6} />
+                  <TextField label="ID VLAN" value={ativo.idVlanIpv4} />
+                  <TextField label="IPv4 Público" value={ativo.ipv4Publico} />
+                  <TextField label="IPv6 Público" value={ativo.ipv6Publico} />
+                  <TextField label="PPPoE User" value={ativo.pppoeUser} />
+                  <PasswordField label="PPPoE Pass" value={ativo.pppoePassword || ''} fieldKey="pppoePassword" />
+                  <TextField label="Last Mile" value={ativo.lastMile} />
+                  <TextField label="Contato Last Mile" value={ativo.contatoLastMile} />
+                </>
+              )}
+
+              {ativo.observacoes && (
+                <div className="bg-zinc-950 p-3 rounded-lg border border-zinc-800/50 mt-2">
+                  <span className="text-zinc-500 text-xs font-bold uppercase block mb-1">Observações</span>
+                  <div 
+                    className="text-zinc-300 text-xs prose prose-invert prose-sm max-w-none"
+                    dangerouslySetInnerHTML={{ __html: ativo.observacoes }}
+                  />
+                </div>
+              )}
+            </motion.div>
+          )}
+        </div>
+
+        <button 
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="w-full mt-4 py-2 flex items-center justify-center gap-2 text-xs font-medium text-zinc-500 hover:text-zinc-300 bg-zinc-950/50 hover:bg-zinc-800 rounded-lg transition-colors"
+        >
+          {isExpanded ? (
+            <><ChevronUp size={14} /> Menos Detalhes</>
+          ) : (
+            <><ChevronDown size={14} /> Mais Detalhes</>
+          )}
+        </button>
+      </div>
+    );
+  };
+
   const AcessosView = () => {
     return (
       <div className="flex-1 flex flex-col p-8 bg-zinc-950 overflow-y-auto">
@@ -1066,9 +1239,42 @@ export default function App() {
                     )}
                   </div>
 
+                  {/* Search Bar */}
+                  <div className="relative">
+                    <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" size={20} />
+                    <input 
+                      type="text"
+                      placeholder="Buscar acessos por nome, tipo, fabricante ou modelo..."
+                      value={searchAtivoQuery}
+                      onChange={(e) => setSearchAtivoQuery(e.target.value)}
+                      className="w-full bg-zinc-900 border border-zinc-800 rounded-xl pl-12 pr-4 py-3 text-sm text-white focus:outline-none focus:border-emerald-500/50 transition-colors"
+                    />
+                    {searchAtivoQuery && (
+                      <button 
+                        onClick={() => setSearchAtivoQuery('')}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white"
+                      >
+                        <XIcon size={16} />
+                      </button>
+                    )}
+                  </div>
+
                   {/* Grouped Assets */}
-                  {['Servers', 'Web Applications', 'Network Assets', 'Outros'].map(categoria => {
-                    const ativosCategoria = ativos.filter(a => a.clienteId === selectedCliente.id && (a.categoriaAcesso === categoria || (!a.categoriaAcesso && categoria === 'Outros')));
+                  {['Servers', 'Web Applications', 'Network Assets', 'Network Topologia', 'Upstream e Downstream', 'Clientes B2B', 'Outros'].map(categoria => {
+                    const ativosCategoria = ativos.filter(a => {
+                      if (a.clienteId !== selectedCliente.id) return false;
+                      if (a.categoriaAcesso !== categoria && (a.categoriaAcesso || categoria !== 'Outros')) return false;
+                      
+                      if (!searchAtivoQuery) return true;
+                      const query = searchAtivoQuery.toLowerCase();
+                      return (
+                        a.nome?.toLowerCase().includes(query) ||
+                        a.tipo?.toLowerCase().includes(query) ||
+                        a.fabricante?.toLowerCase().includes(query) ||
+                        a.modelo?.toLowerCase().includes(query)
+                      );
+                    });
+                    
                     if (ativosCategoria.length === 0) return null;
 
                     return (
@@ -1077,68 +1283,25 @@ export default function App() {
                           {categoria === 'Servers' && <Server size={20} />}
                           {categoria === 'Web Applications' && <Globe size={20} />}
                           {categoria === 'Network Assets' && <Network size={20} />}
+                          {categoria === 'Network Topologia' && <Network size={20} />}
+                          {categoria === 'Upstream e Downstream' && <Network size={20} />}
+                          {categoria === 'Clientes B2B' && <Building2 size={20} />}
                           {categoria === 'Outros' && <Box size={20} />}
                           {categoria}
                         </h4>
                         <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
                           {ativosCategoria.map(ativo => (
-                            <div key={ativo.id} className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 hover:border-emerald-500/30 transition-colors group">
-                              <div className="flex items-start justify-between mb-4">
-                                <div className="flex items-center gap-3">
-                                  <div className="p-2 bg-zinc-800 rounded-lg text-zinc-400">
-                                    {ativo.tipo === 'Router' || ativo.tipo === 'Switch' ? <Router size={20} /> : <Server size={20} />}
-                                  </div>
-                                  <div>
-                                    <h5 className="font-bold text-white">{ativo.nome}</h5>
-                                    <p className="text-xs text-zinc-500">{ativo.fabricante} {ativo.modelo}</p>
-                                  </div>
-                                </div>
-                                {dbUser?.role !== 'viewer' && (
-                                  <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <button onClick={() => setEditingAtivo(ativo)} className="p-1.5 text-zinc-400 hover:text-white bg-zinc-800 rounded-md">
-                                      <EditIcon size={14} />
-                                    </button>
-                                    <button 
-                                      onClick={async () => {
-                                        if (window.confirm('Excluir este acesso?')) {
-                                          await deleteDoc(doc(db, 'clientes', selectedCliente.id!, 'ativos', ativo.id!));
-                                        }
-                                      }} 
-                                      className="p-1.5 text-zinc-400 hover:text-red-400 bg-zinc-800 rounded-md"
-                                    >
-                                      <TrashIcon size={14} />
-                                    </button>
-                                  </div>
-                                )}
-                              </div>
-
-                              <div className="space-y-2 text-sm">
-                                {(ativo.ipv4Hostname || ativo.urlFqdnDomain) && (
-                                  <div className="flex items-center justify-between bg-zinc-950 px-3 py-2 rounded-lg border border-zinc-800/50">
-                                    <span className="text-zinc-500 text-xs font-bold uppercase">Endereço</span>
-                                    <span className="text-zinc-300 font-mono text-xs">{ativo.ipv4Hostname || ativo.urlFqdnDomain}</span>
-                                  </div>
-                                )}
-                                {ativo.sshUser && (
-                                  <div className="flex items-center justify-between bg-zinc-950 px-3 py-2 rounded-lg border border-zinc-800/50">
-                                    <span className="text-zinc-500 text-xs font-bold uppercase">SSH User</span>
-                                    <span className="text-zinc-300 font-mono text-xs">{ativo.sshUser}</span>
-                                  </div>
-                                )}
-                                {ativo.sshPassword && (
-                                  <div className="flex items-center justify-between bg-zinc-950 px-3 py-2 rounded-lg border border-zinc-800/50">
-                                    <span className="text-zinc-500 text-xs font-bold uppercase">SSH Pass</span>
-                                    <span className="text-zinc-300 font-mono text-xs">********</span>
-                                  </div>
-                                )}
-                                {ativo.otherUser && (
-                                  <div className="flex items-center justify-between bg-zinc-950 px-3 py-2 rounded-lg border border-zinc-800/50">
-                                    <span className="text-zinc-500 text-xs font-bold uppercase">Web User</span>
-                                    <span className="text-zinc-300 font-mono text-xs">{ativo.otherUser}</span>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
+                            <AtivoCard 
+                              key={ativo.id} 
+                              ativo={ativo} 
+                              dbUser={dbUser} 
+                              onEdit={() => setEditingAtivo(ativo)} 
+                              onDelete={async () => {
+                                if (window.confirm('Excluir este acesso?')) {
+                                  await deleteDoc(doc(db, 'clientes', selectedCliente.id!, 'ativos', ativo.id!));
+                                }
+                              }} 
+                            />
                           ))}
                         </div>
                       </div>
@@ -1148,6 +1311,16 @@ export default function App() {
                   {ativos.filter(a => a.clienteId === selectedCliente.id).length === 0 && (
                     <div className="p-8 bg-zinc-900 border border-zinc-800 rounded-2xl text-center text-zinc-500">
                       Nenhum acesso cadastrado para este cliente.
+                    </div>
+                  )}
+                  
+                  {ativos.filter(a => a.clienteId === selectedCliente.id).length > 0 && 
+                   !['Servers', 'Web Applications', 'Network Assets', 'Outros'].some(categoria => 
+                     ativos.some(a => a.clienteId === selectedCliente.id && (a.categoriaAcesso === categoria || (!a.categoriaAcesso && categoria === 'Outros')) &&
+                     (!searchAtivoQuery || a.nome?.toLowerCase().includes(searchAtivoQuery.toLowerCase()) || a.tipo?.toLowerCase().includes(searchAtivoQuery.toLowerCase()) || a.fabricante?.toLowerCase().includes(searchAtivoQuery.toLowerCase()) || a.modelo?.toLowerCase().includes(searchAtivoQuery.toLowerCase())))
+                   ) && (
+                    <div className="p-8 bg-zinc-900 border border-zinc-800 rounded-2xl text-center text-zinc-500">
+                      Nenhum acesso encontrado para a busca "{searchAtivoQuery}".
                     </div>
                   )}
                 </>
@@ -2046,7 +2219,37 @@ function AtivoForm({ onClose, user, clienteId, initialData }: { onClose: () => v
     otherPort: initialData?.otherPort || '',
     otherUser: initialData?.otherUser || '',
     otherPassword: initialData?.otherPassword || '',
+    snmpCommunity: initialData?.snmpCommunity || '',
+    consolePassword: initialData?.consolePassword || '',
+    status: initialData?.status || 'Ativo',
     observacoes: initialData?.observacoes || '',
+    
+    // Network Topologia
+    networkTopologyLink: initialData?.networkTopologyLink || '',
+    networkTopologyFileContent: initialData?.networkTopologyFileContent || '',
+    networkTopologyFileName: initialData?.networkTopologyFileName || '',
+
+    // Upstream e Downstream / Clientes B2B
+    linkType: initialData?.linkType || 'Upstream',
+    idCircuito: initialData?.idCircuito || '',
+    velocidadeContratada: initialData?.velocidadeContratada || '',
+    enlaceIpv4: initialData?.enlaceIpv4 || '',
+    idVlanIpv4: initialData?.idVlanIpv4 || '',
+    enlaceIpv6: initialData?.enlaceIpv6 || '',
+    idVlanIpv6: initialData?.idVlanIpv6 || '',
+    multihop: initialData?.multihop || '',
+    multihopIpv6: initialData?.multihopIpv6 || '',
+    communityBlackhole: initialData?.communityBlackhole || '',
+    enderecoAbordagem: initialData?.enderecoAbordagem || '',
+    contatoNoc: initialData?.contatoNoc || '',
+    emailNoc: initialData?.emailNoc || '',
+    enderecoCliente: initialData?.enderecoCliente || '',
+    ipv4Publico: initialData?.ipv4Publico || '',
+    ipv6Publico: initialData?.ipv6Publico || '',
+    pppoeUser: initialData?.pppoeUser || '',
+    pppoePassword: initialData?.pppoePassword || '',
+    lastMile: initialData?.lastMile || '',
+    contatoLastMile: initialData?.contatoLastMile || '',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -2119,6 +2322,9 @@ function AtivoForm({ onClose, user, clienteId, initialData }: { onClose: () => v
                   <option value="Servers">Servers</option>
                   <option value="Web Applications">Web Applications</option>
                   <option value="Network Assets">Network Assets</option>
+                  <option value="Network Topologia">Network Topologia</option>
+                  <option value="Upstream e Downstream">Upstream e Downstream</option>
+                  <option value="Clientes B2B">Clientes B2B</option>
                   <option value="Outros">Outros</option>
                 </select>
               </div>
@@ -2160,109 +2366,411 @@ function AtivoForm({ onClose, user, clienteId, initialData }: { onClose: () => v
                   className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50"
                 />
               </div>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <h4 className="text-sm font-bold text-emerald-500 uppercase tracking-wider flex items-center gap-2">
-              <Globe size={16} /> Endereço e Acesso
-            </h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Endereço IPv4 / Hostname</label>
-                <input 
-                  value={formData.ipv4Hostname}
-                  onChange={e => setFormData({...formData, ipv4Hostname: e.target.value})}
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50 font-mono"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">URL / FQDN Domain</label>
-                <input 
-                  value={formData.urlFqdnDomain}
-                  onChange={e => setFormData({...formData, urlFqdnDomain: e.target.value})}
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50 font-mono"
-                />
+                <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Status</label>
+                <select 
+                  value={formData.status}
+                  onChange={e => setFormData({...formData, status: e.target.value})}
+                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50 text-white appearance-none"
+                >
+                  <option value="Ativo">Ativo</option>
+                  <option value="Inativo">Inativo</option>
+                  <option value="Manutenção">Manutenção</option>
+                  <option value="Planejado">Planejado</option>
+                </select>
               </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {formData.categoriaAcesso === 'Network Topologia' && (
             <div className="space-y-4">
               <h4 className="text-sm font-bold text-emerald-500 uppercase tracking-wider flex items-center gap-2">
-                <Terminal size={16} /> Credenciais SSH / CLI
+                <Network size={16} /> Topologia de Rede
               </h4>
-              <div className="space-y-4">
+              <div className="grid grid-cols-1 gap-4">
                 <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Porta SSH</label>
+                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Link de Acesso (draw.io, etc)</label>
                   <input 
-                    value={formData.sshPort}
-                    onChange={e => setFormData({...formData, sshPort: e.target.value})}
-                    placeholder="22"
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50 font-mono"
+                    value={formData.networkTopologyLink}
+                    onChange={e => setFormData({...formData, networkTopologyLink: e.target.value})}
+                    placeholder="https://app.diagrams.net/..."
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50"
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Usuário SSH</label>
+                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Arquivo draw.io (Upload)</label>
                   <input 
-                    value={formData.sshUser}
-                    onChange={e => setFormData({...formData, sshUser: e.target.value})}
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50 font-mono"
+                    type="file"
+                    accept=".drawio,.xml"
+                    onChange={e => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                          setFormData({
+                            ...formData, 
+                            networkTopologyFileContent: event.target?.result as string,
+                            networkTopologyFileName: file.name
+                          });
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-emerald-500/10 file:text-emerald-500 hover:file:bg-emerald-500/20"
                   />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Senha SSH</label>
-                  <input 
-                    type="password"
-                    value={formData.sshPassword}
-                    onChange={e => setFormData({...formData, sshPassword: e.target.value})}
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50 font-mono"
-                  />
+                  {formData.networkTopologyFileName && (
+                    <p className="text-xs text-emerald-500 mt-1">Arquivo carregado: {formData.networkTopologyFileName}</p>
+                  )}
                 </div>
               </div>
             </div>
+          )}
 
+          {formData.categoriaAcesso === 'Upstream e Downstream' && (
             <div className="space-y-4">
               <h4 className="text-sm font-bold text-emerald-500 uppercase tracking-wider flex items-center gap-2">
-                <Globe size={16} /> Credenciais Web / Outros
+                <Network size={16} /> Detalhes do Link
               </h4>
-              <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Porta Web</label>
+                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Tipo de Link</label>
+                  <select 
+                    value={formData.linkType}
+                    onChange={e => setFormData({...formData, linkType: e.target.value})}
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50 text-white appearance-none"
+                  >
+                    <option value="Upstream">Upstream</option>
+                    <option value="Downstream">Downstream</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">ID Circuito</label>
                   <input 
-                    value={formData.otherPort}
-                    onChange={e => setFormData({...formData, otherPort: e.target.value})}
-                    placeholder="80, 443, 8006"
+                    value={formData.idCircuito}
+                    onChange={e => setFormData({...formData, idCircuito: e.target.value})}
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Velocidade Contratada</label>
+                  <input 
+                    value={formData.velocidadeContratada}
+                    onChange={e => setFormData({...formData, velocidadeContratada: e.target.value})}
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Enlace IPv4</label>
+                  <input 
+                    value={formData.enlaceIpv4}
+                    onChange={e => setFormData({...formData, enlaceIpv4: e.target.value})}
                     className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50 font-mono"
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Usuário Web</label>
+                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">ID VLAN IPv4</label>
                   <input 
-                    value={formData.otherUser}
-                    onChange={e => setFormData({...formData, otherUser: e.target.value})}
+                    value={formData.idVlanIpv4}
+                    onChange={e => setFormData({...formData, idVlanIpv4: e.target.value})}
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Enlace IPv6</label>
+                  <input 
+                    value={formData.enlaceIpv6}
+                    onChange={e => setFormData({...formData, enlaceIpv6: e.target.value})}
                     className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50 font-mono"
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Senha Web</label>
+                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">ID VLAN IPv6</label>
                   <input 
-                    type="password"
-                    value={formData.otherPassword}
-                    onChange={e => setFormData({...formData, otherPassword: e.target.value})}
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50 font-mono"
+                    value={formData.idVlanIpv6}
+                    onChange={e => setFormData({...formData, idVlanIpv6: e.target.value})}
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Multihop</label>
+                  <input 
+                    value={formData.multihop}
+                    onChange={e => setFormData({...formData, multihop: e.target.value})}
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Multihop IPv6</label>
+                  <input 
+                    value={formData.multihopIpv6}
+                    onChange={e => setFormData({...formData, multihopIpv6: e.target.value})}
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Community Blackhole</label>
+                  <input 
+                    value={formData.communityBlackhole}
+                    onChange={e => setFormData({...formData, communityBlackhole: e.target.value})}
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Endereço de Abordagem</label>
+                  <input 
+                    value={formData.enderecoAbordagem}
+                    onChange={e => setFormData({...formData, enderecoAbordagem: e.target.value})}
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Contato NOC</label>
+                  <input 
+                    value={formData.contatoNoc}
+                    onChange={e => setFormData({...formData, contatoNoc: e.target.value})}
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">E-mail NOC</label>
+                  <input 
+                    type="email"
+                    value={formData.emailNoc}
+                    onChange={e => setFormData({...formData, emailNoc: e.target.value})}
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50"
                   />
                 </div>
               </div>
             </div>
-          </div>
+          )}
+
+          {formData.categoriaAcesso === 'Clientes B2B' && (
+            <div className="space-y-4">
+              <h4 className="text-sm font-bold text-emerald-500 uppercase tracking-wider flex items-center gap-2">
+                <Building2 size={16} /> Detalhes do Cliente B2B
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">ID Circuito</label>
+                  <input 
+                    value={formData.idCircuito}
+                    onChange={e => setFormData({...formData, idCircuito: e.target.value})}
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Endereço</label>
+                  <input 
+                    value={formData.enderecoCliente}
+                    onChange={e => setFormData({...formData, enderecoCliente: e.target.value})}
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Velocidade Contratada</label>
+                  <input 
+                    value={formData.velocidadeContratada}
+                    onChange={e => setFormData({...formData, velocidadeContratada: e.target.value})}
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Enlace IPv4</label>
+                  <input 
+                    value={formData.enlaceIpv4}
+                    onChange={e => setFormData({...formData, enlaceIpv4: e.target.value})}
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50 font-mono"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Enlace IPv6</label>
+                  <input 
+                    value={formData.enlaceIpv6}
+                    onChange={e => setFormData({...formData, enlaceIpv6: e.target.value})}
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50 font-mono"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">ID VLAN</label>
+                  <input 
+                    value={formData.idVlanIpv4}
+                    onChange={e => setFormData({...formData, idVlanIpv4: e.target.value})}
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">IPv4 Público</label>
+                  <input 
+                    value={formData.ipv4Publico}
+                    onChange={e => setFormData({...formData, ipv4Publico: e.target.value})}
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50 font-mono"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">IPv6 Público</label>
+                  <input 
+                    value={formData.ipv6Publico}
+                    onChange={e => setFormData({...formData, ipv6Publico: e.target.value})}
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50 font-mono"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">PPPoE User</label>
+                  <input 
+                    value={formData.pppoeUser}
+                    onChange={e => setFormData({...formData, pppoeUser: e.target.value})}
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50 font-mono"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">PPPoE Password</label>
+                  <input 
+                    type="password"
+                    value={formData.pppoePassword}
+                    onChange={e => setFormData({...formData, pppoePassword: e.target.value})}
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50 font-mono"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Last Mile</label>
+                  <input 
+                    value={formData.lastMile}
+                    onChange={e => setFormData({...formData, lastMile: e.target.value})}
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Contato Last Mile</label>
+                  <input 
+                    value={formData.contatoLastMile}
+                    onChange={e => setFormData({...formData, contatoLastMile: e.target.value})}
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {!['Network Topologia', 'Upstream e Downstream', 'Clientes B2B'].includes(formData.categoriaAcesso) && (
+            <>
+              <div className="space-y-4">
+                <h4 className="text-sm font-bold text-emerald-500 uppercase tracking-wider flex items-center gap-2">
+                  <Globe size={16} /> Endereço e Acesso
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Endereço IPv4 / Hostname</label>
+                    <input 
+                      value={formData.ipv4Hostname}
+                      onChange={e => setFormData({...formData, ipv4Hostname: e.target.value})}
+                      className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50 font-mono"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">URL / FQDN Domain</label>
+                    <input 
+                      value={formData.urlFqdnDomain}
+                      onChange={e => setFormData({...formData, urlFqdnDomain: e.target.value})}
+                      className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50 font-mono"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="space-y-4">
+                  <h4 className="text-sm font-bold text-emerald-500 uppercase tracking-wider flex items-center gap-2">
+                    <Terminal size={16} /> Credenciais SSH / CLI
+                  </h4>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Porta SSH</label>
+                      <input 
+                        value={formData.sshPort}
+                        onChange={e => setFormData({...formData, sshPort: e.target.value})}
+                        placeholder="22"
+                        className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50 font-mono"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">SSH User</label>
+                      <input 
+                        value={formData.sshUser}
+                        onChange={e => setFormData({...formData, sshUser: e.target.value})}
+                        className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50 font-mono"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">SSH Password</label>
+                      <input 
+                        type="password"
+                        value={formData.sshPassword}
+                        onChange={e => setFormData({...formData, sshPassword: e.target.value})}
+                        className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50 font-mono"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Console Password</label>
+                      <input 
+                        type="password"
+                        value={formData.consolePassword}
+                        onChange={e => setFormData({...formData, consolePassword: e.target.value})}
+                        className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50 font-mono"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h4 className="text-sm font-bold text-emerald-500 uppercase tracking-wider flex items-center gap-2">
+                    <Globe size={16} /> Credenciais Web / Outros
+                  </h4>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Porta Web</label>
+                      <input 
+                        value={formData.otherPort}
+                        onChange={e => setFormData({...formData, otherPort: e.target.value})}
+                        placeholder="80, 443, 8080"
+                        className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50 font-mono"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Web User</label>
+                      <input 
+                        value={formData.otherUser}
+                        onChange={e => setFormData({...formData, otherUser: e.target.value})}
+                        className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50 font-mono"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Web Password</label>
+                      <input 
+                        type="password"
+                        value={formData.otherPassword}
+                        onChange={e => setFormData({...formData, otherPassword: e.target.value})}
+                        className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50 font-mono"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">SNMP Community</label>
+                      <input 
+                        value={formData.snmpCommunity}
+                        onChange={e => setFormData({...formData, snmpCommunity: e.target.value})}
+                        className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50 font-mono"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
 
           <div className="space-y-2">
             <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Observações</label>
-            <textarea 
-              value={formData.observacoes}
-              onChange={e => setFormData({...formData, observacoes: e.target.value})}
-              className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50 h-24 resize-y"
+            <RichTextEditor 
+              content={formData.observacoes}
+              onChange={(content) => setFormData({...formData, observacoes: content})}
             />
           </div>
         </form>
@@ -2398,6 +2906,8 @@ function UserForm({ onClose, initialData, clientes }: { onClose: () => void, ini
     </motion.div>
   );
 }
+
+import { RichTextEditor } from './components/RichTextEditor';
 
 function CommandForm({ onClose, user, initialData }: { onClose: () => void, user: User, initialData?: Command }) {
   const [formData, setFormData] = useState({
@@ -2540,12 +3050,10 @@ function CommandForm({ onClose, user, initialData }: { onClose: () => void, user
 
           <div className="space-y-2">
             <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Descrição Geral</label>
-            <textarea 
-              required
-              value={formData.descricao}
-              onChange={e => setFormData({...formData, descricao: e.target.value})}
+            <RichTextEditor 
+              content={formData.descricao}
+              onChange={content => setFormData({...formData, descricao: content})}
               placeholder="Descreva o que este conjunto de comandos faz..."
-              className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50 h-24 resize-none"
             />
           </div>
 
@@ -2568,7 +3076,7 @@ function CommandForm({ onClose, user, initialData }: { onClose: () => void, user
                   <button 
                     type="button"
                     onClick={() => removeItem(index)}
-                    className="absolute top-4 right-4 p-1.5 text-zinc-600 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                    className="absolute top-4 right-4 p-1.5 text-zinc-600 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all opacity-0 group-hover:opacity-100 z-10"
                   >
                     <Trash2 size={16} />
                   </button>
@@ -2587,12 +3095,10 @@ function CommandForm({ onClose, user, initialData }: { onClose: () => void, user
                 
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-600">Explicação {index + 1}</label>
-                  <textarea 
-                    required
-                    value={item.explicacao}
-                    onChange={e => updateItem(index, 'explicacao', e.target.value)}
+                  <RichTextEditor 
+                    content={item.explicacao}
+                    onChange={content => updateItem(index, 'explicacao', content)}
                     placeholder="O que este comando faz?"
-                    className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50 h-20 resize-none"
                   />
                 </div>
               </div>
@@ -2614,11 +3120,10 @@ function CommandForm({ onClose, user, initialData }: { onClose: () => void, user
 
           <div className="space-y-2">
             <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Observações</label>
-            <textarea 
-              value={formData.observacoes}
-              onChange={e => setFormData({...formData, observacoes: e.target.value})}
+            <RichTextEditor 
+              content={formData.observacoes}
+              onChange={content => setFormData({...formData, observacoes: content})}
               placeholder="Alertas, impactos ou dicas..."
-              className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50 h-32 resize-y"
             />
           </div>
         </form>
@@ -2736,7 +3241,10 @@ function CommandDetails({ command, commands, isAdmin, setSelectedCommand, onClos
               <Info size={14} />
               Descrição Geral
             </h4>
-            <p className="text-zinc-300 leading-relaxed text-lg whitespace-pre-wrap">{command.descricao}</p>
+            <div 
+              className="text-zinc-300 leading-relaxed text-lg prose prose-invert max-w-none"
+              dangerouslySetInnerHTML={{ __html: command.descricao }}
+            />
           </section>
 
           {command.linkExterno && (
@@ -2784,9 +3292,10 @@ function CommandDetails({ command, commands, isAdmin, setSelectedCommand, onClos
                     <Info size={14} />
                     Explicação
                   </h4>
-                  <p className="text-zinc-400 text-sm leading-relaxed whitespace-pre-wrap">
-                    {item.explicacao}
-                  </p>
+                  <div 
+                    className="text-zinc-400 text-sm leading-relaxed prose prose-invert prose-sm max-w-none"
+                    dangerouslySetInnerHTML={{ __html: item.explicacao }}
+                  />
                 </div>
               </section>
             ))}
@@ -2798,9 +3307,10 @@ function CommandDetails({ command, commands, isAdmin, setSelectedCommand, onClos
                 <AlertTriangle size={14} />
                 Observações & Alertas
               </h4>
-              <div className="text-amber-200/80 text-sm leading-relaxed prose prose-invert prose-amber max-w-none whitespace-pre-wrap">
-                <Markdown>{command.observacoes}</Markdown>
-              </div>
+              <div 
+                className="text-amber-200/80 text-sm leading-relaxed prose prose-invert prose-amber max-w-none"
+                dangerouslySetInnerHTML={{ __html: command.observacoes }}
+              />
             </section>
           )}
 

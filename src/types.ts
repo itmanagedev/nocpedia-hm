@@ -25,6 +25,34 @@ export interface Ativo {
   consolePassword?: string;
   status?: string;
   observacoes?: string;
+  
+  // Network Topologia
+  networkTopologyLink?: string;
+  networkTopologyFileContent?: string;
+  networkTopologyFileName?: string;
+
+  // Upstream e Downstream / Clientes B2B
+  linkType?: string; // 'Upstream' | 'Downstream'
+  idCircuito?: string;
+  velocidadeContratada?: string;
+  enlaceIpv4?: string;
+  idVlanIpv4?: string;
+  enlaceIpv6?: string;
+  idVlanIpv6?: string;
+  multihop?: string;
+  multihopIpv6?: string;
+  communityBlackhole?: string;
+  enderecoAbordagem?: string;
+  contatoNoc?: string;
+  emailNoc?: string;
+  enderecoCliente?: string;
+  ipv4Publico?: string;
+  ipv6Publico?: string;
+  pppoeUser?: string;
+  pppoePassword?: string;
+  lastMile?: string;
+  contatoLastMile?: string;
+
   uid: string;
   createdAt: any;
 }
