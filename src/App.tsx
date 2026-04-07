@@ -2956,7 +2956,11 @@ function UserForm({ onClose, initialData, clientes }: { onClose: () => void, ini
       onClose();
     } catch (error: any) {
       console.error("User registration/update error:", error);
-      alert("Erro ao processar usuário: " + error.message);
+      if (error.code === 'auth/operation-not-allowed') {
+        alert("ERRO: O provedor de 'E-mail/Senha' não está ativado no seu Console do Firebase. \n\nPara corrigir:\n1. Vá ao Console do Firebase\n2. Authentication > Sign-in method\n3. Ative 'Email/Password'");
+      } else {
+        alert("Erro ao processar usuário: " + error.message);
+      }
     } finally {
       setIsSubmitting(false);
     }
