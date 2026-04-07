@@ -1099,7 +1099,13 @@ export default function App() {
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-zinc-800 rounded-lg text-zinc-400">
-              {ativo.tipo === 'Router' || ativo.tipo === 'Switch' ? <Router size={20} /> : <Server size={20} />}
+              {ativo.categoriaAcesso === 'Servers' ? <Server size={20} /> :
+               ativo.categoriaAcesso === 'Web Applications' ? <Globe size={20} /> :
+               ativo.categoriaAcesso === 'Network Assets' ? <Network size={20} /> :
+               ativo.categoriaAcesso === 'Network Topologia' ? <Network size={20} /> :
+               ativo.categoriaAcesso === 'Upstream e Downstream' ? <Network size={20} /> :
+               ativo.categoriaAcesso === 'Clientes B2B' ? <Building2 size={20} /> :
+               <Box size={20} />}
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -1345,8 +1351,8 @@ export default function App() {
                             {categoria === 'Servers' && <Server size={20} />}
                             {categoria === 'Web Applications' && <Globe size={20} />}
                             {categoria === 'Network Assets' && <Network size={20} />}
-                            {categoria === 'Network Topologia' && <Network size={20} />}
-                            {categoria === 'Upstream e Downstream' && <Network size={20} />}
+                            {categoria === 'Network Topologia' && <Layers size={20} />}
+                            {categoria === 'Upstream e Downstream' && <RefreshCw size={20} />}
                             {categoria === 'Clientes B2B' && <Building2 size={20} />}
                             {categoria === 'Outros' && <Box size={20} />}
                             {categoria}
@@ -1416,67 +1422,91 @@ export default function App() {
   };
 
   const HomeView = () => (
-    <div className="flex-1 flex flex-col items-center justify-center p-8 bg-zinc-950 overflow-y-auto relative">
-      {!isSidebarOpen && (
-        <motion.button 
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          onClick={() => setIsSidebarOpen(true)}
-          className="absolute top-6 left-6 p-2 bg-zinc-900 border border-zinc-800 rounded-lg text-zinc-400 hover:text-white hover:border-zinc-700 transition-all z-30"
-          title="Abrir Menu"
-        >
-          <Menu size={20} />
-        </motion.button>
-      )}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.8 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.8 }}
-        className="max-w-4xl w-full text-center space-y-12"
-      >
-        <div className="flex justify-center">
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-            className="p-8 bg-emerald-500/10 rounded-full border border-emerald-500/20 shadow-[0_0_50px_-12px_rgba(16,185,129,0.3)]"
+    <div className="flex-1 flex flex-col p-8 bg-zinc-950 overflow-y-auto">
+      <div className="max-w-6xl w-full mx-auto space-y-12 py-12">
+        <div className="text-center space-y-4">
+          <motion.div 
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="inline-block p-3 bg-emerald-500/10 rounded-2xl text-emerald-500 mb-4"
           >
-            <Terminal size={80} className="text-emerald-500" />
+            <Terminal size={48} />
           </motion.div>
+          <h1 className="text-5xl font-extrabold tracking-tight text-white">
+            Bem-vindo ao <span className="text-emerald-500">NOCPedia</span>
+          </h1>
+          <p className="text-zinc-400 text-xl max-w-2xl mx-auto leading-relaxed">
+            Sua central de conhecimento técnico, documentação de comandos e gestão de ativos de rede.
+          </p>
         </div>
 
-        <div className="space-y-6">
-          <h1 className="text-5xl font-bold tracking-tighter text-white">
-            Bem-vindo ao <span className="text-emerald-500">iT.Wiki</span>
-          </h1>
-          
-          <div className="p-6 bg-zinc-900/50 border border-zinc-800 rounded-2xl text-left space-y-4">
-            <h2 className="text-xl font-semibold text-emerald-400 flex items-center gap-2">
-              <Info size={20} />
-              Nossa História
-            </h2>
-            <p className="text-zinc-400 leading-relaxed">
-              O iT.Wiki nasceu da necessidade de centralizar o conhecimento técnico disperso em diversas plataformas e fabricantes. 
+        <div className="p-8 bg-zinc-900/50 border border-zinc-800 rounded-3xl text-left space-y-6">
+          <h2 className="text-2xl font-bold text-emerald-400 flex items-center gap-3">
+            <Info size={24} />
+            Nossa História
+          </h2>
+          <div className="space-y-4 text-zinc-400 leading-relaxed text-lg">
+            <p>
+              O NOCPedia nasceu da necessidade de centralizar o conhecimento técnico disperso em diversas plataformas e fabricantes. 
               Como profissionais de TI, sabemos que a agilidade no troubleshooting e na configuração de ativos é vital para a continuidade dos negócios.
             </p>
-            <p className="text-zinc-400 leading-relaxed">
+            <p>
               Iniciamos como um repositório simples de comandos Huawei e Cisco, mas rapidamente evoluímos para uma plataforma colaborativa que abrange desde infraestrutura de redes legadas até as mais modernas tecnologias de orquestração de containers e servidores Linux/Windows.
             </p>
-            <p className="text-zinc-400 leading-relaxed font-medium text-zinc-300">
-              Hoje, o iT.Wiki é a bússola para administradores de sistemas e engenheiros de rede que buscam precisão, rapidez e uma base de conhecimento confiável para o dia a dia da operação.
+            <p className="font-medium text-zinc-300">
+              Hoje, o NOCPedia é a bússola para administradores de sistemas e engenheiros de rede que buscam precisão, rapidez e uma base de conhecimento confiável para o dia a dia da operação.
             </p>
           </div>
         </div>
 
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={() => setCurrentView('wiki')}
-          className="px-8 py-4 bg-emerald-500 text-black font-bold rounded-xl hover:bg-emerald-400 transition-all shadow-lg shadow-emerald-500/20 flex items-center gap-3 mx-auto"
-        >
-          <Terminal size={20} />
-          Acessar Base de Conhecimento
-        </motion.button>
-      </motion.div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[
+            { title: 'REDES', icon: <Network size={32} />, color: 'emerald', view: 'wiki', fab: 'Group:Redes' },
+            { title: 'SERVIDORES', icon: <Server size={32} />, color: 'blue', view: 'wiki', fab: 'Group:Server' },
+            { title: 'DOCKER', icon: <Box size={32} />, color: 'cyan', view: 'wiki', fab: 'Docker' },
+            { title: 'KUBERNETES', icon: <Layers size={32} />, color: 'indigo', view: 'wiki', fab: 'Kubernetes' },
+            { title: 'DESENVOLVIMENTO', icon: <Code size={32} />, color: 'amber', view: 'wiki', fab: 'Desenvolvimento' },
+            { title: 'ACESSOS', icon: <ShieldCheck size={32} />, color: 'rose', view: 'acessos', fab: 'All' }
+          ].map((card, i) => (
+            <motion.button
+              key={card.title}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.1 }}
+              whileHover={{ scale: 1.02, y: -4 }}
+              onClick={() => {
+                setCurrentView(card.view as any);
+                if (card.fab) setSelectedFabricante(card.fab as any);
+              }}
+              className="group relative p-8 bg-zinc-900 border border-zinc-800 rounded-3xl text-left hover:border-emerald-500/50 transition-all overflow-hidden"
+            >
+              <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity text-emerald-500">
+                {card.icon}
+              </div>
+              <div className="p-4 bg-zinc-800 text-emerald-500 rounded-2xl mb-6 inline-block group-hover:bg-emerald-500/10 transition-colors">
+                {card.icon}
+              </div>
+              <h3 className="text-2xl font-bold text-white mb-2">{card.title}</h3>
+              <p className="text-zinc-500 text-sm leading-relaxed">
+                Acesse documentações, comandos e ferramentas específicas para {card.title.toLowerCase()}.
+              </p>
+              <div className="mt-6 flex items-center gap-2 text-emerald-500 font-bold text-sm opacity-0 group-hover:opacity-100 transition-opacity">
+                Explorar <Plus size={16} />
+              </div>
+            </motion.button>
+          ))}
+        </div>
+
+        <div className="flex justify-center pt-8">
+          <button 
+            onClick={() => setCurrentView('wiki')}
+            className="flex items-center gap-3 bg-emerald-500 hover:bg-emerald-600 text-white px-10 py-4 rounded-2xl font-bold transition-all shadow-xl shadow-emerald-500/20 group"
+          >
+            Acessar Base de Conhecimento
+            <Plus size={20} className="group-hover:rotate-90 transition-transform" />
+          </button>
+        </div>
+      </div>
     </div>
   );
 
@@ -1568,7 +1598,7 @@ export default function App() {
             >
               <div className="flex items-center gap-3">
                 <Terminal className="text-emerald-500" size={24} />
-                <span className="font-bold text-xl tracking-tight">iT.Wiki</span>
+                <span className="font-bold text-xl tracking-tight">NOCPedia</span>
               </div>
               <button 
                 onClick={(e) => { e.stopPropagation(); setIsSidebarOpen(false); }} 
@@ -1580,19 +1610,6 @@ export default function App() {
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              <div className="space-y-1">
-                <button 
-                  onClick={() => {
-                    setSelectedFabricante('All');
-                    setCurrentView('wiki');
-                  }}
-                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${selectedFabricante === 'All' ? 'bg-emerald-500/10 text-emerald-500' : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200'}`}
-                >
-                  <Layers size={18} />
-                  <span className="text-sm font-medium">Todos os Comandos</span>
-                </button>
-              </div>
-
               {/* Redes Group */}
               <SidebarGroup 
                 groupKey="Redes"
@@ -1752,7 +1769,7 @@ export default function App() {
                   <div className="flex items-center justify-between mb-8">
                     <div>
                       <h2 className="text-2xl font-bold tracking-tight">
-                        {selectedFabricante === 'All' ? 'Todos os Comandos' : selectedFabricante}
+                        {selectedFabricante === 'All' ? 'Base de Conhecimento' : selectedFabricante}
                       </h2>
                       <p className="text-zinc-500 text-sm">
                         {filteredCommands.length} {filteredCommands.length === 1 ? 'comando encontrado' : 'comandos encontrados'}
@@ -1844,6 +1861,12 @@ export default function App() {
             )}
 
             {/* Dashboard View for Groups */}
+            {selectedFabricante === 'All' && (
+              <>
+                <GroupDashboard groupKey="Redes" setSelectedFabricante={setSelectedFabricante} commands={commands} />
+                <GroupDashboard groupKey="Server" setSelectedFabricante={setSelectedFabricante} commands={commands} />
+              </>
+            )}
             {selectedFabricante === 'Group:Redes' && (
               <GroupDashboard groupKey="Redes" setSelectedFabricante={setSelectedFabricante} commands={commands} />
             )}
@@ -1851,55 +1874,57 @@ export default function App() {
               <GroupDashboard groupKey="Server" setSelectedFabricante={setSelectedFabricante} commands={commands} />
             )}
 
-            {groupedCommands ? (
-              Object.entries(groupedCommands).map(([category, cmds]) => {
-                const isExpanded = expandedSubgroups.has(category);
-                return (
-                  <div key={category} className="mb-6">
-                    <button 
-                      onClick={() => toggleSubgroup(category)}
-                      className="w-full flex items-center justify-between text-lg font-bold text-emerald-500 border-b border-zinc-800 pb-2 mb-4 hover:bg-emerald-500/5 transition-colors group"
-                    >
-                      <div className="flex items-center gap-2">
-                        {getCategoryIcon(category)} {category}
-                        <span className="text-xs text-zinc-500 font-normal ml-2">({cmds.length})</span>
-                      </div>
-                      <ChevronDown size={20} className={`transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
-                    </button>
-                    
-                    <AnimatePresence>
-                      {isExpanded && (
-                        <motion.div 
-                          initial={{ height: 0, opacity: 0 }}
-                          animate={{ height: 'auto', opacity: 1 }}
-                          exit={{ height: 0, opacity: 0 }}
-                          className="overflow-hidden"
-                        >
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6 4xl:grid-cols-8 gap-4 pb-6">
-                            {cmds.map(cmd => (
-                              <CommandCard 
-                                key={cmd.id}
-                                cmd={cmd}
-                                onClick={() => setSelectedCommand(cmd)}
-                              />
-                            ))}
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
-                );
-              })
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6 4xl:grid-cols-8 gap-4">
-                {filteredCommands.map(cmd => (
-                  <CommandCard 
-                    key={cmd.id}
-                    cmd={cmd}
-                    onClick={() => setSelectedCommand(cmd)}
-                  />
-                ))}
-              </div>
+            {selectedFabricante !== 'All' && !selectedFabricante.toString().startsWith('Group:') && (
+              groupedCommands ? (
+                Object.entries(groupedCommands).map(([category, cmds]) => {
+                  const isExpanded = expandedSubgroups.has(category);
+                  return (
+                    <div key={category} className="mb-6">
+                      <button 
+                        onClick={() => toggleSubgroup(category)}
+                        className="w-full flex items-center justify-between text-lg font-bold text-emerald-500 border-b border-zinc-800 pb-2 mb-4 hover:bg-emerald-500/5 transition-colors group"
+                      >
+                        <div className="flex items-center gap-2">
+                          {getCategoryIcon(category)} {category}
+                          <span className="text-xs text-zinc-500 font-normal ml-2">({cmds.length})</span>
+                        </div>
+                        <ChevronDown size={20} className={`transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
+                      </button>
+                      
+                      <AnimatePresence>
+                        {isExpanded && (
+                          <motion.div 
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            className="overflow-hidden"
+                          >
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6 4xl:grid-cols-8 gap-4 pb-6">
+                              {cmds.map(cmd => (
+                                <CommandCard 
+                                  key={cmd.id}
+                                  cmd={cmd}
+                                  onClick={() => setSelectedCommand(cmd)}
+                                />
+                              ))}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6 4xl:grid-cols-8 gap-4">
+                  {filteredCommands.map(cmd => (
+                    <CommandCard 
+                      key={cmd.id}
+                      cmd={cmd}
+                      onClick={() => setSelectedCommand(cmd)}
+                    />
+                  ))}
+                </div>
+              )
             )}
 
             {filteredCommands.length === 0 && (
@@ -2958,6 +2983,8 @@ function UserForm({ onClose, initialData, clientes }: { onClose: () => void, ini
       console.error("User registration/update error:", error);
       if (error.code === 'auth/operation-not-allowed') {
         alert("ERRO: O provedor de 'E-mail/Senha' não está ativado no seu Console do Firebase. \n\nPara corrigir:\n1. Vá ao Console do Firebase\n2. Authentication > Sign-in method\n3. Ative 'Email/Password'");
+      } else if (error.code === 'permission-denied' || (error instanceof Error && error.message.includes('permissions'))) {
+        handleFirestoreError(error, initialData ? OperationType.UPDATE : OperationType.WRITE, initialData ? `users/${initialData.uid}` : 'users');
       } else {
         alert("Erro ao processar usuário: " + error.message);
       }
@@ -3576,7 +3603,7 @@ function LoginScreen({ onGoogleLogin, onEmailLogin, onEmailSignUp }: {
         animate={{ opacity: 1, y: 0 }}
         className="text-4xl font-bold mb-2 tracking-tight"
       >
-        iT.Wiki
+        NOCPedia
       </motion.h1>
       
       <motion.p 

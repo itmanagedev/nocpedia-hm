@@ -34,7 +34,14 @@ service cloud.firestore {
       return isAuthenticated() && 
         ((exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin') ||
-         (request.auth.token.email == "noc.itmanage@gmail.com"));
+         (request.auth.token.email == "noc.itmanage@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isValidUser(data) {
+      return data.uid is string && data.uid.size() > 0 && data.uid.size() <= 128 &&
+             data.email is string && data.email.size() > 0 && data.email.size() <= 200 &&
+             data.role in ['admin', 'viewer', 'cliente'] &&
+             (!('clienteId' in data) || (data.clienteId is string && data.clienteId.size() <= 128));
     }
 
     function isCliente(clienteId) {
@@ -95,8 +102,10 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow read: if isAuthenticated();
-      allow create: if request.auth.uid == userId && (request.resource.data.role == 'viewer' || (request.resource.data.role == 'admin' && request.auth.token.email == "noc.itmanage@gmail.com"));
-      allow update: if isAdmin() || (request.auth.uid == userId && request.auth.token.email == "noc.itmanage@gmail.com");
+      // Permite que o próprio usuário crie seu documento (auto-cadastro) ou que um admin crie para outros
+      allow create: if isAuthenticated() && (request.auth.uid == userId || isAdmin()) && isValidUser(request.resource.data);
+      // Permite que admins atualizem qualquer usuário, ou que o próprio usuário atualize seus dados (exceto role)
+      allow update: if isAuthenticated() && (isAdmin() || (request.auth.uid == userId && request.resource.data.role == resource.data.role)) && isValidUser(request.resource.data);
       allow delete: if isAdmin();
     }
   }
