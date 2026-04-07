@@ -1,0 +1,156 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "A user of the system with role-based access.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "viewer", "cliente"] },
+        "clienteId": { "type": "string" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "Command": {
+      "title": "Command",
+      "description": "A technical command entry in the wiki.",
+      "type": "object",
+      "properties": {
+        "titulo": {
+          "type": "string",
+          "description": "The title of the command."
+        },
+        "descricao": {
+          "type": "string",
+          "description": "A brief description of what the command does."
+        },
+        "comando": {
+          "type": "string",
+          "description": "The actual command string."
+        },
+        "explicacao": {
+          "type": "string",
+          "description": "Detailed explanation of the command."
+        },
+        "exemplo": {
+          "type": "string",
+          "description": "A practical example of using the command."
+        },
+        "observacoes": {
+          "type": "string",
+          "description": "Additional notes or warnings."
+        },
+        "fabricante": {
+          "type": "string",
+          "enum": ["Huawei", "Datacom", "Cisco", "Juniper", "Linux", "Windows Server", "Docker", "Kubernetes", "Desenvolvimento"],
+          "description": "The manufacturer or technology."
+        },
+        "categoria": {
+          "type": "string",
+          "description": "The category (e.g., BGP, VLAN, MPLS)."
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Searchable tags."
+        },
+        "uid": {
+          "type": "string",
+          "description": "The UID of the user who created the command."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the command was created."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the command was last updated."
+        }
+      },
+      "required": ["titulo", "comando", "fabricante", "categoria", "uid"]
+    },
+    "Cliente": {
+      "title": "Cliente",
+      "description": "A client company.",
+      "type": "object",
+      "properties": {
+        "nomeFantasia": { "type": "string" },
+        "razaoSocial": { "type": "string" },
+        "cnpj": { "type": "string" },
+        "website": { "type": "string" },
+        "contatoNome": { "type": "string" },
+        "contatoTelefone": { "type": "string" },
+        "contatoEmail": { "type": "string" },
+        "nocNome": { "type": "string" },
+        "nocTelefone": { "type": "string" },
+        "nocEmail": { "type": "string" },
+        "asn": { "type": "string" },
+        "prefixoIPv4": { "type": "string" },
+        "prefixoIPv6": { "type": "string" },
+        "cep": { "type": "string" },
+        "pais": { "type": "string" },
+        "estado": { "type": "string" },
+        "cidade": { "type": "string" },
+        "endereco": { "type": "string" },
+        "geolocalizacao": { "type": "string" },
+        "uid": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["nomeFantasia", "uid", "createdAt"]
+    },
+    "Ativo": {
+      "title": "Ativo",
+      "description": "A network asset or server.",
+      "type": "object",
+      "properties": {
+        "clienteId": { "type": "string" },
+        "categoriaAcesso": { "type": "string" },
+        "nome": { "type": "string" },
+        "tipo": { "type": "string" },
+        "fabricante": { "type": "string" },
+        "modelo": { "type": "string" },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "urlLogo": { "type": "string" },
+        "ipv4Hostname": { "type": "string" },
+        "ipv4Loopback": { "type": "string" },
+        "ipv6Loopback": { "type": "string" },
+        "ipv6Hostname": { "type": "string" },
+        "urlFqdnDomain": { "type": "string" },
+        "sshPort": { "type": "string" },
+        "sshUser": { "type": "string" },
+        "sshPassword": { "type": "string" },
+        "otherPort": { "type": "string" },
+        "otherUser": { "type": "string" },
+        "otherPassword": { "type": "string" },
+        "portAuxIpAddr": { "type": "string" },
+        "popLocation": { "type": "string" },
+        "snmpCommunity": { "type": "string" },
+        "consolePassword": { "type": "string" },
+        "status": { "type": "string" },
+        "observacoes": { "type": "string" },
+        "uid": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["clienteId", "categoriaAcesso", "nome", "tipo", "fabricante", "uid", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/commands/{commandId}": {
+      "schema": "Command",
+      "description": "Collection of technical commands."
+    },
+    "/clientes/{clienteId}": {
+      "schema": "Cliente",
+      "description": "Collection of clients."
+    },
+    "/clientes/{clienteId}/ativos/{ativoId}": {
+      "schema": "Ativo",
+      "description": "Collection of assets per client."
+    }
+  }
+}

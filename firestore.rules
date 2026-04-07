@@ -1,0 +1,103 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: commands
+    // Document ID: auto-generated
+    // Fields:
+    //   - titulo: string (required, 1-200 chars)
+    //   - descricao: string (optional, 0-500 chars)
+    //   - itens: list (required, 1-20 items)
+    //     - comando: string (required, 1-5000 chars)
+    //     - explicacao: string (optional, 0-5000 chars)
+    //   - observacoes: string (optional, 0-5000 chars)
+    //   - fabricante: string (required, enum)
+    //   - categoria: string (required, 1-100 chars)
+    //   - tags: list (optional, strings)
+    //   - uid: string (required, matches auth.uid on create)
+    //   - createdAt: timestamp (required)
+    //   - updatedAt: timestamp (required)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && 
+        ((exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin') ||
+         (request.auth.token.email == "noc.itmanage@gmail.com"));
+    }
+
+    function isCliente(clienteId) {
+      return isAuthenticated() && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'cliente' &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.clienteId == clienteId;
+    }
+
+    function isValidCommand(data) {
+      return data.titulo is string && data.titulo.size() > 0 && data.titulo.size() <= 200 &&
+             data.itens is list && data.itens.size() > 0 && data.itens.size() <= 20 &&
+             data.fabricante is string && data.fabricante.size() <= 100 &&
+             data.categoria is string && data.categoria.size() <= 100 &&
+             (!('descricao' in data) || (data.descricao is string && data.descricao.size() <= 1000)) &&
+             (!('observacoes' in data) || (data.observacoes is string && data.observacoes.size() <= 5000)) &&
+             (!('tags' in data) || (data.tags is list && data.tags.size() <= 20)) &&
+             (!('uid' in data) || (data.uid is string && data.uid.size() <= 128));
+    }
+
+    function isValidCliente(data) {
+      return data.nomeFantasia is string && data.nomeFantasia.size() > 0 && data.nomeFantasia.size() <= 200 &&
+             data.uid is string && data.uid.size() > 0 && data.uid.size() <= 128;
+    }
+
+    function isValidAtivo(data) {
+      return data.clienteId is string && data.clienteId.size() > 0 && data.clienteId.size() <= 128 &&
+             data.categoriaAcesso is string && data.categoriaAcesso.size() > 0 && data.categoriaAcesso.size() <= 100 &&
+             data.nome is string && data.nome.size() > 0 && data.nome.size() <= 200 &&
+             data.tipo is string && data.tipo.size() > 0 && data.tipo.size() <= 100 &&
+             data.fabricante is string && data.fabricante.size() > 0 && data.fabricante.size() <= 100 &&
+             data.uid is string && data.uid.size() > 0 && data.uid.size() <= 128;
+    }
+
+    match /commands/{commandId} {
+      // Allow public read access
+      allow read: if true;
+      
+      // Allow only admins to create/update/delete
+      allow create: if isAdmin() && isValidCommand(request.resource.data);
+      allow update: if isAdmin() && isValidCommand(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /clientes/{clienteId} {
+      allow read: if isAdmin() || isCliente(clienteId);
+      allow create: if isAdmin() && isValidCliente(request.resource.data);
+      allow update: if (isAdmin() || isCliente(clienteId)) && isValidCliente(request.resource.data);
+      allow delete: if isAdmin();
+
+      match /ativos/{ativoId} {
+        allow read: if isAdmin() || isCliente(clienteId);
+        allow create: if (isAdmin() || isCliente(clienteId)) && isValidAtivo(request.resource.data);
+        allow update: if (isAdmin() || isCliente(clienteId)) && isValidAtivo(request.resource.data);
+        allow delete: if isAdmin() || isCliente(clienteId);
+      }
+    }
+
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if request.auth.uid == userId && (request.resource.data.role == 'viewer' || (request.resource.data.role == 'admin' && request.auth.token.email == "noc.itmanage@gmail.com"));
+      allow update: if isAdmin() || (request.auth.uid == userId && request.auth.token.email == "noc.itmanage@gmail.com");
+      allow delete: if isAdmin();
+    }
+  }
+}
