@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { initializeApp, deleteApp } from 'firebase/app';
 import { 
   Search, 
   Plus, 
@@ -47,7 +48,8 @@ import {
   ArrowLeft,
   Eye,
   EyeOff,
-  ChevronUp
+  ChevronUp,
+  UserPlus
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -75,9 +77,11 @@ import {
   signOut,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
+  getAuth,
   User
 } from 'firebase/auth';
 import { db, auth } from './firebase';
+import firebaseConfig from '../firebase-applet-config.json';
 import { Command, Fabricante, Cliente, Ativo, DBUser } from './types';
 import { getInitialCommands } from './data/initialCommands';
 import Markdown from 'react-markdown';
@@ -466,6 +470,7 @@ export default function App() {
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [isAddingCliente, setIsAddingCliente] = useState(false);
   const [editingCliente, setEditingCliente] = useState<Cliente | null>(null);
+  const [isAddingUser, setIsAddingUser] = useState(false);
   const [editingUser, setEditingUser] = useState<DBUser | null>(null);
   const [selectedCliente, setSelectedCliente] = useState<Cliente | null>(null);
   const [ativos, setAtivos] = useState<Ativo[]>([]);
@@ -919,6 +924,15 @@ export default function App() {
                 <UserIcon size={20} className="text-emerald-500" />
                 Usuários
               </h3>
+              {isAdmin && (
+                <button 
+                  onClick={() => setIsAddingUser(true)}
+                  className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors shadow-lg shadow-emerald-500/20"
+                >
+                  <UserPlus size={18} />
+                  Novo Usuário
+                </button>
+              )}
             </div>
             <div className="divide-y divide-zinc-800">
               {usersList.length === 0 ? (
@@ -1925,6 +1939,12 @@ export default function App() {
 
     {/* Modals */}
         <AnimatePresence>
+          {isAddingUser && (
+            <UserForm 
+              onClose={() => setIsAddingUser(false)} 
+              clientes={clientes}
+            />
+          )}
           {editingUser && (
             <UserForm 
               onClose={() => setEditingUser(null)} 
@@ -2880,10 +2900,12 @@ function AtivoForm({ onClose, user, clienteId, initialData }: { onClose: () => v
   );
 }
 
-function UserForm({ onClose, initialData, clientes }: { onClose: () => void, initialData: DBUser, clientes: Cliente[] }) {
+function UserForm({ onClose, initialData, clientes }: { onClose: () => void, initialData?: DBUser, clientes: Cliente[] }) {
   const [formData, setFormData] = useState({
-    role: initialData.role,
-    clienteId: initialData.clienteId || '',
+    email: initialData?.email || '',
+    password: '',
+    role: initialData?.role || 'viewer',
+    clienteId: initialData?.clienteId || '',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -2891,17 +2913,50 @@ function UserForm({ onClose, initialData, clientes }: { onClose: () => void, ini
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      const userRef = doc(db, 'users', initialData.uid);
-      const updateData: any = { role: formData.role };
-      if (formData.role === 'cliente') {
-        updateData.clienteId = formData.clienteId;
+      if (initialData) {
+        // Edit existing user
+        const userRef = doc(db, 'users', initialData.uid);
+        const updateData: any = { role: formData.role };
+        if (formData.role === 'cliente') {
+          updateData.clienteId = formData.clienteId;
+        } else {
+          updateData.clienteId = deleteField();
+        }
+        await updateDoc(userRef, updateData);
       } else {
-        updateData.clienteId = deleteField();
+        // Create new user
+        // We use a secondary app to avoid signing out the current admin
+        const secondaryApp = initializeApp(firebaseConfig, 'SecondaryRegistration');
+        const secondaryAuth = getAuth(secondaryApp);
+        
+        try {
+          const userCredential = await createUserWithEmailAndPassword(secondaryAuth, formData.email, formData.password);
+          const newUid = userCredential.user.uid;
+          
+          // Create Firestore document
+          const userDocData: any = {
+            uid: newUid,
+            email: formData.email,
+            role: formData.role,
+            createdAt: serverTimestamp()
+          };
+          
+          if (formData.role === 'cliente') {
+            userDocData.clienteId = formData.clienteId;
+          }
+          
+          await setDoc(doc(db, 'users', newUid), userDocData);
+          
+          // Sign out from secondary app
+          await secondaryAuth.signOut();
+        } finally {
+          await deleteApp(secondaryApp);
+        }
       }
-      await updateDoc(userRef, updateData);
       onClose();
-    } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `users/${initialData.uid}`);
+    } catch (error: any) {
+      console.error("User registration/update error:", error);
+      alert("Erro ao processar usuário: " + error.message);
     } finally {
       setIsSubmitting(false);
     }
@@ -2923,21 +2978,49 @@ function UserForm({ onClose, initialData, clientes }: { onClose: () => void, ini
         <div className="p-6 border-b border-zinc-800 flex items-center justify-between bg-zinc-900/50">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-emerald-500/10 text-emerald-500 rounded-xl">
-              <UserIcon size={24} />
+              {initialData ? <UserIcon size={24} /> : <UserPlus size={24} />}
             </div>
-            <h3 className="text-xl font-bold tracking-tight">Editar Usuário</h3>
+            <h3 className="text-xl font-bold tracking-tight">{initialData ? 'Editar Usuário' : 'Novo Usuário'}</h3>
           </div>
           <button onClick={onClose} className="text-zinc-500 hover:text-white transition-colors p-2">
             <X size={24} />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+        <form onSubmit={handleSubmit} className="p-6 space-y-6 overflow-y-auto max-h-[80vh]">
           <div className="space-y-4">
-            <div>
-              <p className="text-sm font-bold text-white">{initialData.email}</p>
-              <p className="text-xs text-zinc-500 font-mono">{initialData.uid}</p>
-            </div>
+            {!initialData ? (
+              <>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">E-mail</label>
+                  <input 
+                    required
+                    type="email"
+                    value={formData.email}
+                    onChange={e => setFormData({...formData, email: e.target.value})}
+                    placeholder="exemplo@email.com"
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50 text-white"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Senha Temporária</label>
+                  <input 
+                    required
+                    type="password"
+                    value={formData.password}
+                    onChange={e => setFormData({...formData, password: e.target.value})}
+                    placeholder="••••••••"
+                    minLength={6}
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50 text-white"
+                  />
+                </div>
+              </>
+            ) : (
+              <div>
+                <p className="text-sm font-bold text-white">{initialData.email}</p>
+                <p className="text-xs text-zinc-500 font-mono">{initialData.uid}</p>
+              </div>
+            )}
 
             <div className="space-y-2">
               <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Nível de Acesso</label>
@@ -2981,9 +3064,19 @@ function UserForm({ onClose, initialData, clientes }: { onClose: () => void, ini
             <button 
               type="submit"
               disabled={isSubmitting || (formData.role === 'cliente' && !formData.clienteId)}
-              className="bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white px-8 py-2.5 rounded-xl text-sm font-semibold transition-colors"
+              className="bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white px-8 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg shadow-emerald-500/20 flex items-center gap-2"
             >
-              {isSubmitting ? 'Salvando...' : 'Salvar'}
+              {isSubmitting ? (
+                <>
+                  <RefreshCw size={18} className="animate-spin" />
+                  Processando...
+                </>
+              ) : (
+                <>
+                  <Save size={18} />
+                  {initialData ? 'Salvar Alterações' : 'Criar Usuário'}
+                </>
+              )}
             </button>
           </div>
         </form>
