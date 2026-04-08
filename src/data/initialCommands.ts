@@ -1293,5 +1293,272 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     uid,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp()
+  },
+  {
+    titulo: "Troubleshooting OSPF Avançado (Cisco)",
+    descricao: "Comandos para diagnóstico profundo de adjacências e banco de dados OSPF.",
+    itens: [
+      {
+        comando: "show ip ospf neighbor",
+        explicacao: "Verifica o estado das adjacências (deve ser FULL para redes P2P ou Broadcast)."
+      },
+      {
+        comando: "show ip ospf database",
+        explicacao: "Exibe o banco de dados de estado de link (LSDB) para verificar LSAs recebidos."
+      },
+      {
+        comando: "show ip ospf interface brief",
+        explicacao: "Verifica quais interfaces estão participando do processo OSPF e seus custos."
+      }
+    ],
+    observacoes: "Problemas comuns: MTU mismatch, Area ID incorreta, ou Timers divergentes.",
+    fabricante: "Cisco",
+    categoria: "Routing",
+    tags: ["cisco", "ospf", "routing", "troubleshooting"],
+    uid,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp()
+  },
+  {
+    titulo: "Troubleshooting BGP Avançado (Cisco)",
+    descricao: "Comandos para validar sessões e rotas BGP.",
+    itens: [
+      {
+        comando: "show ip bgp summary",
+        explicacao: "Exibe o status de todos os vizinhos BGP e a quantidade de prefixos recebidos."
+      },
+      {
+        comando: "show ip bgp neighbors 10.0.0.1 advertised-routes",
+        explicacao: "Mostra quais rotas estão sendo enviadas para um vizinho específico."
+      },
+      {
+        comando: "show ip bgp neighbors 10.0.0.1 received-routes",
+        explicacao: "Mostra as rotas recebidas de um vizinho (requer soft-reconfiguration inbound)."
+      }
+    ],
+    observacoes: "O estado 'Idle' ou 'Active' geralmente indica falha na conectividade TCP ou erro de configuração.",
+    fabricante: "Cisco",
+    categoria: "Routing",
+    tags: ["cisco", "bgp", "routing", "troubleshooting"],
+    uid,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp()
+  },
+  {
+    titulo: "Comandos Essenciais Junos (Juniper)",
+    descricao: "Operações básicas e verificação de status em equipamentos Juniper.",
+    itens: [
+      {
+        comando: "show interfaces terse",
+        explicacao: "Exibe um resumo rápido do status de todas as interfaces (Admin/Link/Protocol)."
+      },
+      {
+        comando: "show route",
+        explicacao: "Exibe a tabela de roteamento (inet.0 para IPv4)."
+      },
+      {
+        comando: "show chassis hardware",
+        explicacao: "Lista todos os componentes físicos, números de série e versões de hardware."
+      },
+      {
+        comando: "commit check",
+        explicacao: "Valida a sintaxe da configuração candidata antes de aplicá-la."
+      }
+    ],
+    observacoes: "No Junos, as alterações só entram em vigor após o comando 'commit'.",
+    fabricante: "Juniper",
+    categoria: "Sistema",
+    tags: ["juniper", "junos", "system", "basics"],
+    uid,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp()
+  },
+  {
+    titulo: "Troubleshooting OSPF/BGP no Junos (Juniper)",
+    descricao: "Verificação de protocolos de roteamento dinâmico em Juniper.",
+    itens: [
+      {
+        comando: "show ospf neighbor",
+        explicacao: "Verifica o estado dos vizinhos OSPF."
+      },
+      {
+        comando: "show bgp summary",
+        explicacao: "Exibe o status das sessões BGP (Established é o estado desejado)."
+      },
+      {
+        comando: "show bgp neighbor 10.0.0.1",
+        explicacao: "Detalhes completos de uma sessão BGP específica."
+      }
+    ],
+    observacoes: "Use 'monitor traffic interface ge-0/0/0' para capturar pacotes de controle em tempo real.",
+    fabricante: "Juniper",
+    categoria: "Routing",
+    tags: ["juniper", "ospf", "bgp", "routing", "troubleshooting"],
+    uid,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp()
+  },
+  {
+    titulo: "Comandos de Operação Arista (EOS)",
+    descricao: "Comandos essenciais para switches Arista Networks.",
+    itens: [
+      {
+        comando: "show interfaces status",
+        explicacao: "Exibe o status das portas, VLANs, duplex, velocidade e tipo de transceptores."
+      },
+      {
+        comando: "show lldp neighbors",
+        explicacao: "Lista vizinhos conectados via LLDP."
+      },
+      {
+        comando: "show mlag",
+        explicacao: "Verifica o status do Multi-Chassis Link Aggregation (MLAG)."
+      },
+      {
+        comando: "show version",
+        explicacao: "Exibe a versão do EOS, uptime e recursos de hardware."
+      }
+    ],
+    observacoes: "O Arista EOS é baseado em Linux e possui uma CLI muito similar à do Cisco IOS.",
+    fabricante: "Arista",
+    categoria: "Switching",
+    tags: ["arista", "eos", "switching", "mlag"],
+    uid,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp()
+  },
+  {
+    titulo: "Troubleshooting de VXLAN (Arista)",
+    descricao: "Comandos para diagnóstico de túneis VXLAN e VTEPs.",
+    itens: [
+      {
+        comando: "show vxlan vtep",
+        explicacao: "Exibe o status dos túneis VXLAN e endereços IP dos VTEPs remotos."
+      },
+      {
+        comando: "show vxlan address-table",
+        explicacao: "Mostra os endereços MAC aprendidos através dos túneis VXLAN."
+      }
+    ],
+    observacoes: "VXLAN é fundamental para redes Data Center modernas (Leaf-Spine).",
+    fabricante: "Arista",
+    categoria: "Switching",
+    tags: ["arista", "vxlan", "datacenter", "troubleshooting"],
+    uid,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp()
+  },
+  {
+    titulo: "Captura de Pacotes Avançada (Cisco)",
+    descricao: "Uso do Embedded Packet Capture (EPC) para análise de tráfego no plano de dados.",
+    itens: [
+      {
+        comando: "monitor capture MYCAP interface Gi0/1 both",
+        explicacao: "Define o ponto de captura na interface Gi0/1 para tráfego de entrada e saída."
+      },
+      {
+        comando: "monitor capture MYCAP match any\nmonitor capture MYCAP start",
+        explicacao: "Inicia a captura de todos os pacotes."
+      },
+      {
+        comando: "show monitor capture MYCAP buffer brief",
+        explicacao: "Exibe um resumo dos pacotes capturados no buffer."
+      }
+    ],
+    observacoes: "Lembre-se de parar a captura com 'monitor capture MYCAP stop' para não sobrecarregar a CPU.",
+    fabricante: "Cisco",
+    categoria: "Sistema",
+    tags: ["cisco", "packet-capture", "epc", "troubleshooting"],
+    uid,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp()
+  },
+  {
+    titulo: "Análise de Performance e CPU",
+    descricao: "Comandos para identificar processos que estão consumindo muitos recursos.",
+    itens: [
+      {
+        comando: "show processes cpu sorted (Cisco)",
+        explicacao: "Lista os processos ordenados pelo uso de CPU."
+      },
+      {
+        comando: "show processes top (Arista)",
+        explicacao: "Exibe o uso de CPU e memória estilo 'top' do Linux."
+      },
+      {
+        comando: "display cpu-usage (Huawei)",
+        explicacao: "Mostra a utilização da CPU no Huawei."
+      }
+    ],
+    observacoes: "Picos de CPU podem ser causados por loops de rede, excesso de tráfego de controle ou bugs de software.",
+    fabricante: "Linux",
+    categoria: "Sistema",
+    tags: ["performance", "cpu", "troubleshooting", "monitoring"],
+    uid,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp()
+  },
+  {
+    titulo: "Diagnóstico Completo (Huawei)",
+    descricao: "Gera um relatório completo de diagnóstico do sistema.",
+    itens: [
+      {
+        comando: "display diagnostic-information",
+        explicacao: "Coleta e exibe todas as informações de configuração, status e estatísticas para suporte técnico."
+      }
+    ],
+    observacoes: "Este comando gera uma saída muito longa. Recomenda-se capturar o log da sessão do terminal.",
+    fabricante: "Huawei",
+    categoria: "Sistema",
+    tags: ["huawei", "diagnostic", "troubleshooting", "support"],
+    uid,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp()
+  },
+  {
+    titulo: "Monitoramento de Alarmes (Huawei)",
+    descricao: "Comandos para verificar alarmes ativos e histórico de traps.",
+    itens: [
+      {
+        comando: "display alarm active",
+        explicacao: "Lista todos os alarmes que estão ativos no momento no equipamento."
+      },
+      {
+        comando: "display trapbuffer",
+        explicacao: "Exibe o buffer de traps (mensagens SNMP) enviadas pelo sistema."
+      }
+    ],
+    observacoes: "Verifique a severidade dos alarmes (Critical, Major, Minor) para priorizar a resolução.",
+    fabricante: "Huawei",
+    categoria: "Sistema",
+    tags: ["huawei", "alarm", "trap", "monitoring"],
+    uid,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp()
+  },
+  {
+    titulo: "Troubleshooting Avançado (ZTE)",
+    descricao: "Comandos para diagnóstico de falhas em equipamentos ZTE.",
+    itens: [
+      {
+        comando: "show alarm active",
+        explicacao: "Exibe os alarmes ativos no sistema."
+      },
+      {
+        comando: "show logging",
+        explicacao: "Mostra os logs de eventos registrados no equipamento."
+      },
+      {
+        comando: "show running-config",
+        explicacao: "Exibe a configuração que está sendo executada no momento."
+      }
+    ],
+    observacoes: "Útil para correlacionar eventos de log com quedas de interfaces ou serviços.",
+    fabricante: "ZTE",
+    categoria: "Sistema",
+    tags: ["zte", "troubleshooting", "alarm", "logs"],
+    uid,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp()
   }
 ];

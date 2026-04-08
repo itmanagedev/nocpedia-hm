@@ -175,10 +175,10 @@ export const FABRICANTE_DETAILS: Record<string, FabricanteDetail> = {
 };
 
 export const CATEGORIAS = [
-  "BGP", "VLAN", "MPLS", "Interface", "Sistema", "Routing", "Switching", "Security", "DevOps", "Database",
-  "OLT", "SWITCH", "ROUTER", "LINHA C3XX", "LINHA TITAN C6XX", "Admin", "Containers", "GPON", "Gerência",
-  "Monitoring", "Hardware", "Virtualization", "Container", "Automation", "Troubleshooting", "Backup", "Cloud"
-];
+  "Admin", "Automation", "Backup", "BGP", "Cloud", "Container", "Containers", "Database", "DevOps", "GPON", 
+  "Gerência", "Hardware", "Interface", "LINHA C3XX", "LINHA TITAN C6XX", "MPLS", "Monitoring", "OLT", 
+  "ROUTER", "Routing", "SWITCH", "Security", "Sistema", "Switching", "Troubleshooting", "VLAN", "Virtualization"
+].sort();
 
 export const CATEGORIA_DETAILS: Record<string, string> = {
   "BGP": "Protocolo de Gateway de Borda (Border Gateway Protocol) usado para troca de informações de roteamento entre sistemas autônomos na Internet.",

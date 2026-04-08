@@ -49,7 +49,9 @@ import {
   Eye,
   EyeOff,
   ChevronUp,
-  UserPlus
+  UserPlus,
+  Sun,
+  Moon
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -468,6 +470,12 @@ const ShortcutItem = ({
   );
 };
 
+interface Toast {
+  id: string;
+  message: string;
+  type: 'success' | 'error' | 'info';
+}
+
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [dbUser, setDbUser] = useState<DBUser | null>(null);
@@ -485,6 +493,25 @@ export default function App() {
   const [isAddingAtivo, setIsAddingAtivo] = useState(false);
   const [editingAtivo, setEditingAtivo] = useState<Ativo | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [toasts, setToasts] = useState<Toast[]>([]);
+
+  const addToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
+    const id = Math.random().toString(36).substring(2, 9);
+    setToasts(prev => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id));
+    }, 4000);
+  };
+
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('nocpedia-theme');
+      if (saved === 'light' || saved === 'dark') return saved;
+      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+    return 'dark';
+  });
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFabricante, setSelectedFabricante] = useState<Fabricante | 'All' | 'Group:Redes' | 'Group:Server'>('All');
   const [expandedGroups, setExpandedGroups] = useState<string[]>(['Redes', 'Server']);
@@ -603,6 +630,17 @@ export default function App() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isAdmin]);
+
+  useEffect(() => {
+    const root = window.document.documentElement;
+    root.classList.remove('light', 'dark');
+    root.classList.add(theme);
+    localStorage.setItem('nocpedia-theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prev => prev === 'light' ? 'dark' : 'light');
+  };
 
   // Auth state
   useEffect(() => {
@@ -857,30 +895,46 @@ export default function App() {
   };
 
   const handleLogin = async () => {
+    if (isLoggingIn) return;
+    setIsLoggingIn(true);
     const provider = new GoogleAuthProvider();
     try {
       await signInWithPopup(auth, provider);
     } catch (error: any) {
-      console.error("Login error:", error);
-      alert("Erro ao fazer login com Google. Verifique se os popups estão permitidos.");
+      if (error.code === 'auth/cancelled-popup-request' || error.code === 'auth/popup-closed-by-user') {
+        console.log("Login cancelado pelo usuário.");
+      } else {
+        console.error("Login error:", error);
+        alert("Erro ao fazer login com Google: " + error.message);
+      }
+    } finally {
+      setIsLoggingIn(false);
     }
   };
 
   const handleEmailLogin = async (email: string, pass: string) => {
+    if (isLoggingIn) return;
+    setIsLoggingIn(true);
     try {
       await signInWithEmailAndPassword(auth, email, pass);
     } catch (error: any) {
       console.error("Email login error:", error);
       alert("Erro ao fazer login: " + error.message);
+    } finally {
+      setIsLoggingIn(false);
     }
   };
 
   const handleEmailSignUp = async (email: string, pass: string) => {
+    if (isLoggingIn) return;
+    setIsLoggingIn(true);
     try {
       await createUserWithEmailAndPassword(auth, email, pass);
     } catch (error: any) {
       console.error("Email signup error:", error);
       alert("Erro ao criar conta: " + error.message);
+    } finally {
+      setIsLoggingIn(false);
     }
   };
 
@@ -1601,7 +1655,7 @@ export default function App() {
   }
 
   if (!user) {
-    return <LoginScreen onGoogleLogin={handleLogin} onEmailLogin={handleEmailLogin} onEmailSignUp={handleEmailSignUp} />;
+    return <LoginScreen onGoogleLogin={handleLogin} onEmailLogin={handleEmailLogin} onEmailSignUp={handleEmailSignUp} isLoggingIn={isLoggingIn} />;
   }
 
   return (
@@ -1685,6 +1739,13 @@ export default function App() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
+                    <button 
+                      onClick={toggleTheme}
+                      className="flex-1 flex items-center justify-center gap-2 px-2 py-2 text-xs font-medium text-zinc-400 hover:text-emerald-500 bg-zinc-800/50 hover:bg-zinc-800 rounded-lg transition-colors"
+                      title={theme === 'light' ? 'Modo Escuro' : 'Modo Claro'}
+                    >
+                      {theme === 'light' ? <Moon size={16} /> : <Sun size={16} />}
+                    </button>
                     {dbUser?.role !== 'cliente' && (
                       <button 
                         onClick={() => setCurrentView('configuracoes')}
@@ -2046,6 +2107,7 @@ export default function App() {
             <CommandForm 
               onClose={() => setIsAdding(false)} 
               user={user!} 
+              addToast={addToast}
             />
           )}
           {editingCommand && (
@@ -2053,6 +2115,7 @@ export default function App() {
               onClose={() => setEditingCommand(null)} 
               user={user!} 
               initialData={editingCommand}
+              addToast={addToast}
             />
           )}
           {selectedCommand && (
@@ -2066,10 +2129,12 @@ export default function App() {
                 setSelectedCommand(null);
                 setEditingCommand(cmd);
               }}
+              addToast={addToast}
               breadcrumbs={<Breadcrumbs />}
             />
           )}
         </AnimatePresence>
+        <ToastContainer toasts={toasts} />
       </main>
     </div>
   );
@@ -3153,7 +3218,7 @@ function UserForm({ onClose, initialData, clientes }: { onClose: () => void, ini
   );
 }
 
-function CommandForm({ onClose, user, initialData }: { onClose: () => void, user: User, initialData?: Command }) {
+function CommandForm({ onClose, user, initialData, addToast }: { onClose: () => void, user: User, initialData?: Command, addToast: (msg: string, type?: 'success' | 'error') => void }) {
   const [formData, setFormData] = useState({
     titulo: initialData?.titulo || '',
     descricao: initialData?.descricao || '',
@@ -3199,15 +3264,18 @@ function CommandForm({ onClose, user, initialData }: { onClose: () => void, user
 
       if (initialData?.id) {
         await updateDoc(doc(db, 'commands', initialData.id), data);
+        addToast('Comando atualizado com sucesso!');
       } else {
         await addDoc(collection(db, 'commands'), {
           ...data,
           uid: user.uid,
           createdAt: serverTimestamp()
         });
+        addToast('Novo comando adicionado com sucesso!');
       }
       onClose();
     } catch (error) {
+      addToast('Erro ao salvar comando.', 'error');
       handleFirestoreError(error, initialData ? OperationType.UPDATE : OperationType.CREATE, 'commands');
     } finally {
       setIsSubmitting(false);
@@ -3392,9 +3460,10 @@ function CommandForm({ onClose, user, initialData }: { onClose: () => void, user
   );
 }
 
-function CommandDetails({ command, commands, isAdmin, setSelectedCommand, onClose, onEdit, breadcrumbs }: { command: Command, commands: Command[], isAdmin: boolean, setSelectedCommand: (cmd: Command) => void, onClose: () => void, onEdit: (cmd: Command) => void, breadcrumbs?: React.ReactNode }) {
+function CommandDetails({ command, commands, isAdmin, setSelectedCommand, onClose, onEdit, addToast, breadcrumbs }: { command: Command, commands: Command[], isAdmin: boolean, setSelectedCommand: (cmd: Command) => void, onClose: () => void, onEdit: (cmd: Command) => void, addToast: (msg: string, type?: 'success' | 'error') => void, breadcrumbs?: React.ReactNode }) {
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const handleCopy = (text: string, index: number) => {
     navigator.clipboard.writeText(text);
@@ -3403,81 +3472,84 @@ function CommandDetails({ command, commands, isAdmin, setSelectedCommand, onClos
   };
 
   const handleDelete = async () => {
-    if (!window.confirm('Tem certeza que deseja excluir este comando?')) return;
     setIsDeleting(true);
     try {
       if (command.id) {
         await deleteDoc(doc(db, 'commands', command.id));
+        addToast('Comando excluído com sucesso!');
         onClose();
       }
     } catch (error) {
+      addToast('Erro ao excluir comando.', 'error');
       handleFirestoreError(error, OperationType.REMOVE, `commands/${command.id}`);
     } finally {
       setIsDeleting(false);
+      setShowDeleteConfirm(false);
     }
   };
 
   return (
-    <motion.div 
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-4"
-    >
+    <>
       <motion.div 
-        initial={{ y: 50, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        exit={{ y: 50, opacity: 0 }}
-        className="bg-zinc-900 border border-zinc-800 w-full max-w-7xl rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-4"
       >
-        <div className="p-6 border-b border-zinc-800 flex items-center justify-between bg-zinc-900/50 sticky top-0 z-10">
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-emerald-500/10 text-emerald-500 rounded-xl">
-              {getFabricanteIcon(command.fabricante, 24)}
-            </div>
-            <div>
-              <h3 className="text-2xl font-bold tracking-tight">{command.titulo}</h3>
-              <div className="flex items-center gap-2 text-xs text-zinc-500 mt-1">
-                <span className="font-bold text-emerald-500 uppercase tracking-widest">{command.fabricante}</span>
-                <span>•</span>
-                <span>{command.categoria}</span>
-                {command.subgrupo && (
-                  <>
-                    <span>•</span>
-                    <span className="text-zinc-400">{command.subgrupo}</span>
-                  </>
-                )}
+        <motion.div 
+          initial={{ y: 50, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: 50, opacity: 0 }}
+          className="bg-zinc-900 border border-zinc-800 w-full max-w-7xl rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]"
+        >
+          <div className="p-6 border-b border-zinc-800 flex items-center justify-between bg-zinc-900/50 sticky top-0 z-10">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-emerald-500/10 text-emerald-500 rounded-xl">
+                {getFabricanteIcon(command.fabricante, 24)}
+              </div>
+              <div>
+                <h3 className="text-2xl font-bold tracking-tight">{command.titulo}</h3>
+                <div className="flex items-center gap-2 text-xs text-zinc-500 mt-1">
+                  <span className="font-bold text-emerald-500 uppercase tracking-widest">{command.fabricante}</span>
+                  <span>•</span>
+                  <span>{command.categoria}</span>
+                  {command.subgrupo && (
+                    <>
+                      <span>•</span>
+                      <span className="text-zinc-400">{command.subgrupo}</span>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
+            <button onClick={onClose} className="text-zinc-500 hover:text-white transition-colors p-2">
+              <X size={28} />
+            </button>
           </div>
-          <button onClick={onClose} className="text-zinc-500 hover:text-white transition-colors p-2">
-            <X size={28} />
-          </button>
-        </div>
 
-        <div className="p-8 overflow-y-auto space-y-10">
-          {breadcrumbs && (
-            <div className="mb-2">
-              {breadcrumbs}
-            </div>
-          )}
-          {isAdmin && (
-            <div className="flex justify-end gap-3 -mb-6">
-              <button 
-                onClick={() => onEdit(command)}
-                className="text-xs font-bold text-emerald-500 bg-emerald-500/10 px-3 py-1.5 rounded-lg hover:bg-emerald-500/20 transition-colors"
-              >
-                Editar
-              </button>
-              <button 
-                onClick={handleDelete}
-                disabled={isDeleting}
-                className="text-xs font-bold text-red-500 bg-red-500/10 px-3 py-1.5 rounded-lg hover:bg-red-500/20 transition-colors"
-              >
-                {isDeleting ? 'Excluindo...' : 'Excluir'}
-              </button>
-            </div>
-          )}
+          <div className="p-8 overflow-y-auto space-y-10">
+            {breadcrumbs && (
+              <div className="mb-2">
+                {breadcrumbs}
+              </div>
+            )}
+            {isAdmin && (
+              <div className="flex justify-end gap-3 -mb-6">
+                <button 
+                  onClick={() => onEdit(command)}
+                  className="text-xs font-bold text-emerald-500 bg-emerald-500/10 px-3 py-1.5 rounded-lg hover:bg-emerald-500/20 transition-colors"
+                >
+                  Editar
+                </button>
+                <button 
+                  onClick={() => setShowDeleteConfirm(true)}
+                  disabled={isDeleting}
+                  className="text-xs font-bold text-red-500 bg-red-500/10 px-3 py-1.5 rounded-lg hover:bg-red-500/20 transition-colors"
+                >
+                  {isDeleting ? 'Excluindo...' : 'Excluir'}
+                </button>
+              </div>
+            )}
           
           {/* Header Info */}
           <section>
@@ -3604,13 +3676,85 @@ function CommandDetails({ command, commands, isAdmin, setSelectedCommand, onClos
         </div>
       </motion.div>
     </motion.div>
+
+      <AnimatePresence>
+        {showDeleteConfirm && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-zinc-900 border border-zinc-800 p-8 rounded-3xl max-w-md w-full shadow-2xl space-y-6"
+            >
+              <div className="flex flex-col items-center text-center space-y-4">
+                <div className="p-4 bg-red-500/10 text-red-500 rounded-full">
+                  <AlertTriangle size={48} />
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-xl font-bold text-white">Confirmar Exclusão</h3>
+                  <p className="text-zinc-400 text-sm">
+                    Tem certeza que deseja excluir o comando <span className="text-white font-bold">"{command.titulo}"</span>? Esta ação não pode ser desfeita.
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="flex-1 px-6 py-3 rounded-xl text-sm font-bold text-zinc-400 bg-zinc-800 hover:bg-zinc-700 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleDelete}
+                  disabled={isDeleting}
+                  className="flex-1 px-6 py-3 rounded-xl text-sm font-bold text-white bg-red-500 hover:bg-red-600 transition-colors shadow-lg shadow-red-500/20"
+                >
+                  {isDeleting ? 'Excluindo...' : 'Sim, Excluir'}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
   );
 }
 
-function LoginScreen({ onGoogleLogin, onEmailLogin, onEmailSignUp }: { 
+const ToastContainer = ({ toasts }: { toasts: Toast[] }) => (
+  <div className="fixed bottom-6 right-6 z-[100] flex flex-col gap-3 pointer-events-none">
+    <AnimatePresence>
+      {toasts.map(toast => (
+        <motion.div
+          key={toast.id}
+          initial={{ opacity: 0, x: 20, scale: 0.9 }}
+          animate={{ opacity: 1, x: 0, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
+          className={`pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl shadow-2xl border ${
+            toast.type === 'success' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500' :
+            toast.type === 'error' ? 'bg-red-500/10 border-red-500/20 text-red-500' :
+            'bg-zinc-900 border-zinc-800 text-zinc-400'
+          }`}
+        >
+          {toast.type === 'success' && <CheckCircle2 size={18} />}
+          {toast.type === 'error' && <AlertTriangle size={18} />}
+          {toast.type === 'info' && <Info size={18} />}
+          <span className="text-sm font-bold">{toast.message}</span>
+        </motion.div>
+      ))}
+    </AnimatePresence>
+  </div>
+);
+
+function LoginScreen({ onGoogleLogin, onEmailLogin, onEmailSignUp, isLoggingIn }: { 
   onGoogleLogin: () => void, 
   onEmailLogin: (email: string, pass: string) => void,
-  onEmailSignUp: (email: string, pass: string) => void
+  onEmailSignUp: (email: string, pass: string) => void,
+  isLoggingIn: boolean
 }) {
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
@@ -3687,17 +3831,19 @@ function LoginScreen({ onGoogleLogin, onEmailLogin, onEmailSignUp }: {
           </div>
           <button 
             type="submit"
-            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-2xl font-bold text-lg transition-all shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-2"
+            disabled={isLoggingIn}
+            className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white py-4 rounded-2xl font-bold text-lg transition-all shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-2"
           >
-            {isSignUp ? 'Criar Conta' : 'Entrar no Sistema'}
-            <ChevronRight size={20} />
+            {isLoggingIn ? 'Processando...' : (isSignUp ? 'Criar Conta' : 'Entrar no Sistema')}
+            {!isLoggingIn && <ChevronRight size={20} />}
           </button>
         </form>
 
         <div className="flex flex-col gap-4">
           <button 
             onClick={() => setIsSignUp(!isSignUp)}
-            className="text-xs text-zinc-500 hover:text-zinc-300 uppercase tracking-widest font-bold transition-colors"
+            disabled={isLoggingIn}
+            className="text-xs text-zinc-500 hover:text-zinc-300 disabled:opacity-50 uppercase tracking-widest font-bold transition-colors"
           >
             {isSignUp ? 'Já tem uma conta? Entrar' : 'Não tem uma conta? Criar Agora'}
           </button>
@@ -3713,10 +3859,15 @@ function LoginScreen({ onGoogleLogin, onEmailLogin, onEmailSignUp }: {
 
           <button 
             onClick={onGoogleLogin}
-            className="w-full flex items-center justify-center gap-3 bg-zinc-800 hover:bg-zinc-700 text-white px-8 py-4 rounded-2xl text-base font-bold transition-all border border-zinc-700"
+            disabled={isLoggingIn}
+            className="w-full flex items-center justify-center gap-3 bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-8 py-4 rounded-2xl text-base font-bold transition-all border border-zinc-700"
           >
-            <Globe size={20} />
-            Google Login
+            {isLoggingIn ? (
+              <RefreshCw size={20} className="animate-spin" />
+            ) : (
+              <Globe size={20} />
+            )}
+            {isLoggingIn ? 'Aguarde...' : 'Google Login'}
           </button>
         </div>
       </motion.div>
