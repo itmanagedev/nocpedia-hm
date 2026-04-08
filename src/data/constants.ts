@@ -180,6 +180,36 @@ export const CATEGORIAS = [
   "Monitoring", "Hardware", "Virtualization", "Container", "Automation", "Troubleshooting", "Backup", "Cloud"
 ];
 
+export const CATEGORIA_DETAILS: Record<string, string> = {
+  "BGP": "Protocolo de Gateway de Borda (Border Gateway Protocol) usado para troca de informações de roteamento entre sistemas autônomos na Internet.",
+  "VLAN": "Virtual Local Area Network (VLAN) é uma tecnologia que segmenta redes locais em grupos de trabalho virtuais independentes.",
+  "MPLS": "Multiprotocol Label Switching é uma tecnologia de transporte de dados que encaminha pacotes baseando-se em rótulos, aumentando a eficiência e velocidade da rede.",
+  "Sistema": "Comandos e configurações relacionados ao sistema operacional e gerenciamento básico do equipamento.",
+  "Interface": "Configurações de portas físicas e lógicas, como Ethernet, SFP e agregação de links (LACP).",
+  "Routing": "Protocolos e configurações de roteamento estático e dinâmico (OSPF, RIP, IS-IS).",
+  "Switching": "Tecnologias de camada 2, incluindo Spanning Tree (STP), empilhamento e controle de broadcast.",
+  "Security": "Regras de firewall, listas de controle de acesso (ACLs) e proteção contra ataques de rede.",
+  "DevOps": "Práticas e ferramentas que integram desenvolvimento e operações para automação e entrega contínua.",
+  "Database": "Comandos para gerenciamento, consulta e manutenção de bancos de dados relacionais e NoSQL.",
+  "OLT": "Optical Line Terminal, equipamento central em redes ópticas passivas (PON) que gerencia a comunicação com os clientes.",
+  "GPON": "Gigabit Passive Optical Network, tecnologia de fibra óptica ponto-multiponto para entrega de serviços de banda larga.",
+  "Monitoring": "Protocolos e ferramentas para monitoramento de performance, disponibilidade e saúde dos ativos (SNMP, Syslog).",
+  "Hardware": "Informações sobre componentes físicos, diagnósticos de sensores, fontes e temperatura do chassi.",
+  "Virtualization": "Tecnologias de abstração de hardware para execução de múltiplas máquinas virtuais em um único servidor físico.",
+  "Container": "Empacotamento de aplicações e suas dependências em unidades isoladas para execução consistente em diferentes ambientes.",
+  "Automation": "Uso de scripts e ferramentas (Ansible, Python) para automatizar tarefas repetitivas de configuração e gestão.",
+  "Troubleshooting": "Procedimentos e comandos de diagnóstico para identificação e resolução de falhas técnicas.",
+  "Backup": "Estratégias e comandos para cópia de segurança de configurações e dados críticos para recuperação de desastres.",
+  "Cloud": "Infraestrutura e serviços computacionais entregues sob demanda através da internet ou redes privadas.",
+  "Admin": "Tarefas administrativas de alto nível, gestão de usuários e permissões do sistema.",
+  "Gerência": "Configurações de protocolos de gerenciamento e acesso remoto (SSH, Telnet, NETCONF).",
+  "Containers": "Orquestração e gestão de múltiplos containers em ambientes de produção.",
+  "ROUTER": "Configurações específicas para equipamentos de roteamento de borda e core.",
+  "SWITCH": "Configurações específicas para switches de acesso, agregação e core.",
+  "LINHA C3XX": "Documentação específica para a linha de equipamentos ZTE C300/C320.",
+  "LINHA TITAN C6XX": "Documentação específica para a nova geração de equipamentos ZTE Titan C600."
+};
+
 export const GROUPS = {
   Redes: {
     icon: Network,

@@ -90,6 +90,7 @@ import {
   FABRICANTES, 
   FABRICANTE_DETAILS, 
   CATEGORIAS, 
+  CATEGORIA_DETAILS,
   GROUPS, 
   REDES_FABRICANTES, 
   SERVER_FABRICANTES 
@@ -185,6 +186,12 @@ export class ErrorBoundary extends React.Component<{ children: React.ReactNode }
     return this.props.children;
   }
 }
+
+const Logo = ({ size = 24, className = "" }: { size?: number, className?: string }) => (
+  <div className={`bg-zinc-950 border border-zinc-800 rounded-xl p-1.5 flex items-center justify-center shadow-lg ${className}`}>
+    <Terminal size={size} className="text-emerald-500" />
+  </div>
+);
 
 // Helper Components
 const SidebarGroup = ({ 
@@ -1428,9 +1435,9 @@ export default function App() {
           <motion.div 
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="inline-block p-3 bg-emerald-500/10 rounded-2xl text-emerald-500 mb-4"
+            className="inline-block mb-4"
           >
-            <Terminal size={48} />
+            <Logo size={48} className="p-4 rounded-3xl border-2" />
           </motion.div>
           <h1 className="text-5xl font-extrabold tracking-tight text-white">
             Bem-vindo ao <span className="text-emerald-500">NOCPedia</span>
@@ -1566,13 +1573,29 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-zinc-950 text-white">
+      <div className="flex flex-col items-center justify-center h-screen bg-zinc-950 text-white gap-6">
         <motion.div 
-          animate={{ rotate: 360 }}
-          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+          animate={{ 
+            scale: [1, 1.1, 1],
+            opacity: [0.5, 1, 0.5]
+          }}
+          transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
         >
-          <Terminal size={48} className="text-emerald-500" />
+          <Logo size={64} className="p-6 rounded-[2.5rem] border-2 border-emerald-500/20" />
         </motion.div>
+        <div className="flex flex-col items-center gap-2">
+          <h2 className="text-2xl font-bold tracking-tighter text-emerald-500">NOCPedia</h2>
+          <div className="flex gap-1">
+            {[0, 1, 2].map((i) => (
+              <motion.div
+                key={i}
+                animate={{ opacity: [0.3, 1, 0.3] }}
+                transition={{ duration: 1, repeat: Infinity, delay: i * 0.2 }}
+                className="w-1.5 h-1.5 bg-emerald-500 rounded-full"
+              />
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
@@ -1597,7 +1620,7 @@ export default function App() {
               onClick={() => setCurrentView('home')}
             >
               <div className="flex items-center gap-3">
-                <Terminal className="text-emerald-500" size={24} />
+                <Logo size={20} />
                 <span className="font-bold text-xl tracking-tight">NOCPedia</span>
               </div>
               <button 
@@ -1782,14 +1805,14 @@ export default function App() {
                   </div>
 
             {/* Category Description or Manufacturer Details */}
-            {(selectedFabricante !== 'All') && (
+            {(selectedFabricante !== 'All' || selectedCategoria !== 'All') && (
               <motion.div 
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="mb-8 p-6 bg-zinc-900/50 border border-zinc-800 rounded-2xl relative overflow-hidden"
               >
                 {/* Background Logo Accent */}
-                {FABRICANTE_DETAILS[selectedFabricante as string] && (
+                {selectedFabricante !== 'All' && FABRICANTE_DETAILS[selectedFabricante as string] && (
                   <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
                     <img 
                       src={FABRICANTE_DETAILS[selectedFabricante as string].logo} 
@@ -1797,6 +1820,20 @@ export default function App() {
                       className="w-48 h-48 object-contain grayscale"
                       referrerPolicy="no-referrer"
                     />
+                  </div>
+                )}
+
+                {selectedCategoria !== 'All' && (
+                  <div className="mb-6 pb-6 border-b border-zinc-800/50 relative z-10">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="p-2 bg-emerald-500/10 text-emerald-500 rounded-lg">
+                        {getCategoryIcon(selectedCategoria)}
+                      </div>
+                      <h3 className="text-xl font-bold text-white">Categoria: {selectedCategoria}</h3>
+                    </div>
+                    <p className="text-zinc-400 text-sm leading-relaxed max-w-3xl">
+                      {CATEGORIA_DETAILS[selectedCategoria] || `Documentação e comandos relacionados a ${selectedCategoria}.`}
+                    </p>
                   </div>
                 )}
 
