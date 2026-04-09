@@ -1316,6 +1316,22 @@ export default function App() {
 
     const categories = ['Servers', 'Web Applications', 'Network Assets', 'Network Topologia', 'Upstream e Downstream', 'Clientes B2B', 'Outros'];
 
+    const getInfraData = (cliente: Cliente) => {
+      if (Array.isArray(cliente.infraestrutura) && cliente.infraestrutura.length > 0) {
+        return {
+          asns: cliente.infraestrutura.map(i => i.asn).filter(Boolean),
+          ipv4s: cliente.infraestrutura.map(i => i.ipv4).filter(Boolean),
+          ipv6s: cliente.infraestrutura.map(i => i.ipv6).filter(Boolean)
+        };
+      }
+      // Fallback para dados antigos
+      const asns = Array.isArray(cliente.asn) ? cliente.asn : [cliente.asn].filter(Boolean) as string[];
+      const ipv4s = Array.isArray(cliente.prefixoIPv4) ? cliente.prefixoIPv4 : [cliente.prefixoIPv4].filter(Boolean) as string[];
+      const ipv6s = Array.isArray(cliente.prefixoIPv6) ? cliente.prefixoIPv6 : [cliente.prefixoIPv6].filter(Boolean) as string[];
+      
+      return { asns, ipv4s, ipv6s };
+    };
+
     return (
       <div className="flex-1 flex flex-col p-8 bg-zinc-950 overflow-y-auto">
         <div className="max-w-6xl w-full mx-auto space-y-8">
@@ -1344,17 +1360,21 @@ export default function App() {
                       <Building2 size={18} className="mt-0.5 shrink-0" />
                       <div className="flex flex-col min-w-0">
                         <span className="font-medium truncate">{c.nomeFantasia}</span>
-                        {Array.isArray(c.infraestrutura) && c.infraestrutura.length > 0 && (
-                          <div className="flex flex-col mt-0.5">
-                            {c.infraestrutura.map((infra, idx) => (
-                              <div key={idx} className="flex flex-col">
-                                {infra.asn && <span className="text-[9px] text-zinc-500 truncate">ASN: {infra.asn}</span>}
-                                {infra.ipv4 && <span className="text-[9px] text-zinc-500 truncate">IP: {infra.ipv4}</span>}
-                              </div>
-                            )).slice(0, 2)}
-                            {c.infraestrutura.length > 2 && <span className="text-[9px] text-zinc-600">...</span>}
-                          </div>
-                        )}
+                        {(() => {
+                          const { asns, ipv4s } = getInfraData(c);
+                          if (asns.length === 0 && ipv4s.length === 0) return null;
+                          return (
+                            <div className="flex flex-col mt-0.5">
+                              {asns.slice(0, 1).map((asn, idx) => (
+                                <span key={`asn-${idx}`} className="text-[9px] text-zinc-500 truncate">ASN: {asn}</span>
+                              ))}
+                              {ipv4s.slice(0, 1).map((ip, idx) => (
+                                <span key={`ip-${idx}`} className="text-[9px] text-zinc-500 truncate">IP: {ip}</span>
+                              ))}
+                              {(asns.length > 1 || ipv4s.length > 1) && <span className="text-[9px] text-zinc-600">...</span>}
+                            </div>
+                          );
+                        })()}
                       </div>
                     </button>
                   ))}
@@ -1378,28 +1398,38 @@ export default function App() {
                         <p className="text-zinc-400 text-sm mt-1">CNPJ: {selectedCliente.cnpj || 'N/A'}</p>
                       </div>
 
-                      {Array.isArray(selectedCliente.infraestrutura) && selectedCliente.infraestrutura.length > 0 && (
-                        <div className="hidden md:flex flex-col gap-1 border-l border-zinc-800 pl-12">
-                          <div className="flex items-center gap-3">
-                            <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest w-8">ASN</span>
-                            <span className="text-sm text-zinc-300 font-medium">
-                              {selectedCliente.infraestrutura.map(i => i.asn).filter(Boolean).join(', ') || 'N/A'}
-                            </span>
+                      {(() => {
+                        const { asns, ipv4s, ipv6s } = getInfraData(selectedCliente);
+                        if (asns.length === 0 && ipv4s.length === 0 && ipv6s.length === 0) return null;
+                        return (
+                          <div className="hidden md:flex flex-col gap-1 border-l border-zinc-800 pl-12">
+                            {asns.length > 0 && (
+                              <div className="flex items-center gap-3">
+                                <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest w-8">ASN</span>
+                                <span className="text-sm text-zinc-300 font-medium">
+                                  {asns.join(', ')}
+                                </span>
+                              </div>
+                            )}
+                            {ipv4s.length > 0 && (
+                              <div className="flex items-center gap-3">
+                                <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest w-8">IPv4</span>
+                                <span className="text-sm text-zinc-300 font-medium">
+                                  {ipv4s.join(', ')}
+                                </span>
+                              </div>
+                            )}
+                            {ipv6s.length > 0 && (
+                              <div className="flex items-center gap-3">
+                                <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest w-8">IPv6</span>
+                                <span className="text-sm text-zinc-300 font-medium">
+                                  {ipv6s.join(', ')}
+                                </span>
+                              </div>
+                            )}
                           </div>
-                          <div className="flex items-center gap-3">
-                            <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest w-8">IPv4</span>
-                            <span className="text-sm text-zinc-300 font-medium">
-                              {selectedCliente.infraestrutura.map(i => i.ipv4).filter(Boolean).join(', ') || 'N/A'}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest w-8">IPv6</span>
-                            <span className="text-sm text-zinc-300 font-medium">
-                              {selectedCliente.infraestrutura.map(i => i.ipv6).filter(Boolean).join(', ') || 'N/A'}
-                            </span>
-                          </div>
-                        </div>
-                      )}
+                        );
+                      })()}
                     </div>
                     {dbUser?.role !== 'viewer' && (
                       <button 
@@ -2197,20 +2227,20 @@ function ClienteForm({ onClose, user, initialData }: { onClose: () => void, user
     nocEmail: initialData?.nocEmail || '',
     infraestrutura: initialData?.infraestrutura || (
       // Migração de dados antigos
-      Array.isArray((initialData as any)?.asn) || Array.isArray((initialData as any)?.prefixoIPv4) || Array.isArray((initialData as any)?.prefixoIPv6) 
+      Array.isArray(initialData?.asn) || Array.isArray(initialData?.prefixoIPv4) || Array.isArray(initialData?.prefixoIPv6) 
         ? Array.from({ length: Math.max(
-            Array.isArray((initialData as any)?.asn) ? (initialData as any).asn.length : 0,
-            Array.isArray((initialData as any)?.prefixoIPv4) ? (initialData as any).prefixoIPv4.length : 0,
-            Array.isArray((initialData as any)?.prefixoIPv6) ? (initialData as any).prefixoIPv6.length : 0
+            Array.isArray(initialData?.asn) ? initialData.asn.length : 0,
+            Array.isArray(initialData?.prefixoIPv4) ? initialData.prefixoIPv4.length : 0,
+            Array.isArray(initialData?.prefixoIPv6) ? initialData.prefixoIPv6.length : 0
           ) || 1 }).map((_, i) => ({
-            asn: ((initialData as any)?.asn)?.[i] || '',
-            ipv4: ((initialData as any)?.prefixoIPv4)?.[i] || '',
-            ipv6: ((initialData as any)?.prefixoIPv6)?.[i] || ''
+            asn: (Array.isArray(initialData?.asn) ? initialData.asn[i] : initialData?.asn) || '',
+            ipv4: (Array.isArray(initialData?.prefixoIPv4) ? initialData.prefixoIPv4[i] : initialData?.prefixoIPv4) || '',
+            ipv6: (Array.isArray(initialData?.prefixoIPv6) ? initialData.prefixoIPv6[i] : initialData?.prefixoIPv6) || ''
           }))
         : [{ 
-            asn: (initialData as any)?.asn || '', 
-            ipv4: (initialData as any)?.prefixoIPv4 || '', 
-            ipv6: (initialData as any)?.prefixoIPv6 || '' 
+            asn: (initialData?.asn as string) || '', 
+            ipv4: (initialData?.prefixoIPv4 as string) || '', 
+            ipv6: (initialData?.prefixoIPv6 as string) || '' 
           }]
     ),
     cep: initialData?.cep || '',

@@ -74,6 +74,9 @@ export interface Cliente {
     ipv4: string;
     ipv6: string;
   }[];
+  asn?: string | string[];
+  prefixoIPv4?: string | string[];
+  prefixoIPv6?: string | string[];
   cep?: string;
   pais?: string;
   estado?: string;
