@@ -51,7 +51,10 @@ import {
   ChevronUp,
   UserPlus,
   Sun,
-  Moon
+  Moon,
+  FileText,
+  Paperclip,
+  Download
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -752,7 +755,7 @@ export default function App() {
       });
       return unsubscribe;
     } else if (isAdmin) {
-      const q = query(collection(db, 'clientes'), orderBy('createdAt', 'desc'));
+      const q = query(collection(db, 'clientes'), orderBy('nomeFantasia', 'asc'));
       const unsubscribe = onSnapshot(q, (snapshot) => {
         const cls = snapshot.docs.map(doc => ({
           id: doc.id,
@@ -1332,6 +1335,15 @@ export default function App() {
       return { asns, ipv4s, ipv6s };
     };
 
+    const downloadDocument = (doc: { nome: string, content: string }) => {
+      const link = document.createElement('a');
+      link.href = doc.content;
+      link.download = doc.nome;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    };
+
     return (
       <div className="flex-1 flex flex-col p-8 bg-zinc-950 overflow-y-auto">
         <div className="max-w-6xl w-full mx-auto space-y-8">
@@ -1461,6 +1473,39 @@ export default function App() {
                       </button>
                     )}
                   </div>
+
+                  {/* Documents Section */}
+                  {selectedCliente.documentos && selectedCliente.documentos.length > 0 && (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between border-b border-zinc-800 pb-2">
+                        <h4 className="text-lg font-bold text-emerald-500 flex items-center gap-2">
+                          <Paperclip size={20} /> Documentos da Empresa
+                        </h4>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {selectedCliente.documentos.map((doc, idx) => (
+                          <div key={idx} className="flex items-center justify-between p-4 bg-zinc-900 border border-zinc-800 rounded-2xl group hover:border-emerald-500/30 transition-all">
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div className="p-2 bg-emerald-500/10 text-emerald-500 rounded-xl">
+                                <FileText size={20} />
+                              </div>
+                              <div className="flex flex-col min-w-0">
+                                <span className="text-sm font-bold text-white truncate">{doc.nome}</span>
+                                <span className="text-[10px] text-zinc-500 uppercase">{(doc.size / 1024).toFixed(1)} KB</span>
+                              </div>
+                            </div>
+                            <button 
+                              onClick={() => downloadDocument(doc)}
+                              className="p-2 bg-zinc-800 text-zinc-400 hover:text-emerald-500 hover:bg-emerald-500/10 rounded-xl transition-all"
+                              title="Baixar Documento"
+                            >
+                              <Download size={18} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Grouped Assets */}
                   {categories.map(categoria => {
@@ -2249,8 +2294,49 @@ function ClienteForm({ onClose, user, initialData }: { onClose: () => void, user
     cidade: initialData?.cidade || '',
     endereco: initialData?.endereco || '',
     geolocalizacao: initialData?.geolocalizacao || '',
+    documentos: initialData?.documentos || [],
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+
+    Array.from(files).forEach(file => {
+      if (file.size > 800000) { // ~800KB limit for Base64 in Firestore (1MB doc limit)
+        alert(`O arquivo ${file.name} é muito grande. O limite é de 800KB.`);
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const content = event.target?.result as string;
+        setFormData(prev => ({
+          ...prev,
+          documentos: [
+            ...prev.documentos,
+            {
+              nome: file.name,
+              tipo: file.type,
+              content: content,
+              size: file.size,
+              createdAt: new Date().toISOString()
+            }
+          ]
+        }));
+      };
+      reader.readAsDataURL(file);
+    });
+    // Clear input
+    e.target.value = '';
+  };
+
+  const removeDocument = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      documentos: prev.documentos.filter((_, i) => i !== index)
+    }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -2470,6 +2556,58 @@ function ClienteForm({ onClose, user, initialData }: { onClose: () => void, user
                   className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50"
                 />
               </div>
+            </div>
+          </div>
+
+          {/* Documents and Attachments */}
+          <div className="space-y-4">
+            <h4 className="text-sm font-bold text-emerald-500 uppercase tracking-wider flex items-center gap-2">
+              <Paperclip size={16} /> Documentos e Anexos
+            </h4>
+            <div className="space-y-4">
+              <div className="flex items-center justify-center w-full">
+                <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-zinc-800 border-dashed rounded-2xl cursor-pointer bg-zinc-950/50 hover:bg-zinc-900/50 hover:border-emerald-500/50 transition-all group">
+                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                    <Paperclip className="w-8 h-8 mb-3 text-zinc-500 group-hover:text-emerald-500 transition-colors" />
+                    <p className="mb-2 text-sm text-zinc-400">
+                      <span className="font-bold">Clique para anexar</span> ou arraste e solte
+                    </p>
+                    <p className="text-xs text-zinc-500">PDF, PNG, JPG ou DOC (Máx. 800KB)</p>
+                  </div>
+                  <input 
+                    type="file" 
+                    className="hidden" 
+                    multiple 
+                    onChange={handleFileUpload}
+                    accept=".pdf,.png,.jpg,.jpeg,.doc,.docx"
+                  />
+                </label>
+              </div>
+
+              {formData.documentos.length > 0 && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {formData.documentos.map((doc, idx) => (
+                    <div key={idx} className="flex items-center justify-between p-3 bg-zinc-950 border border-zinc-800 rounded-xl group">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="p-2 bg-zinc-900 text-emerald-500 rounded-lg">
+                          <FileText size={18} />
+                        </div>
+                        <div className="flex flex-col min-w-0">
+                          <span className="text-sm font-medium text-zinc-200 truncate">{doc.nome}</span>
+                          <span className="text-[10px] text-zinc-500 uppercase">{(doc.size / 1024).toFixed(1)} KB</span>
+                        </div>
+                      </div>
+                      <button 
+                        type="button"
+                        onClick={() => removeDocument(idx)}
+                        className="p-1.5 text-zinc-500 hover:text-red-500 transition-colors"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 

@@ -83,6 +83,13 @@ export interface Cliente {
   cidade?: string;
   endereco?: string;
   geolocalizacao?: string;
+  documentos?: {
+    nome: string;
+    tipo: string;
+    content: string; // Base64 content
+    size: number;
+    createdAt: any;
+  }[];
   uid: string;
   createdAt: any;
 }
