@@ -1339,10 +1339,23 @@ export default function App() {
                     <button
                       key={c.id}
                       onClick={() => setSelectedCliente(c)}
-                      className={`w-full text-left px-4 py-3 rounded-xl transition-colors flex items-center gap-3 ${selectedCliente?.id === c.id ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : 'bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800'}`}
+                      className={`w-full text-left px-4 py-3 rounded-xl transition-colors flex items-start gap-3 ${selectedCliente?.id === c.id ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : 'bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800'}`}
                     >
-                      <Building2 size={18} />
-                      <span className="font-medium truncate">{c.nomeFantasia}</span>
+                      <Building2 size={18} className="mt-0.5 shrink-0" />
+                      <div className="flex flex-col min-w-0">
+                        <span className="font-medium truncate">{c.nomeFantasia}</span>
+                        {Array.isArray(c.infraestrutura) && c.infraestrutura.length > 0 && (
+                          <div className="flex flex-col mt-0.5">
+                            {c.infraestrutura.map((infra, idx) => (
+                              <div key={idx} className="flex flex-col">
+                                {infra.asn && <span className="text-[9px] text-zinc-500 truncate">ASN: {infra.asn}</span>}
+                                {infra.ipv4 && <span className="text-[9px] text-zinc-500 truncate">IP: {infra.ipv4}</span>}
+                              </div>
+                            )).slice(0, 2)}
+                            {c.infraestrutura.length > 2 && <span className="text-[9px] text-zinc-600">...</span>}
+                          </div>
+                        )}
+                      </div>
                     </button>
                   ))}
                   {clientes.length === 0 && (
@@ -1359,20 +1372,34 @@ export default function App() {
               {selectedCliente ? (
                 <>
                   <div className="flex items-center justify-between bg-zinc-900 p-6 rounded-2xl border border-zinc-800">
-                    <div>
-                      <h3 className="text-2xl font-bold text-white">{selectedCliente.nomeFantasia}</h3>
-                      <div className="flex flex-wrap gap-x-6 gap-y-1 mt-1">
-                        <p className="text-zinc-400 text-sm">CNPJ: {selectedCliente.cnpj || 'N/A'}</p>
-                        {Array.isArray(selectedCliente.asn) && selectedCliente.asn.length > 0 && (
-                          <p className="text-zinc-400 text-sm">ASN: {selectedCliente.asn.join(', ')}</p>
-                        )}
-                        {Array.isArray(selectedCliente.prefixoIPv4) && selectedCliente.prefixoIPv4.length > 0 && (
-                          <p className="text-zinc-400 text-sm">IPv4: {selectedCliente.prefixoIPv4.join(', ')}</p>
-                        )}
-                        {Array.isArray(selectedCliente.prefixoIPv6) && selectedCliente.prefixoIPv6.length > 0 && (
-                          <p className="text-zinc-400 text-sm">IPv6: {selectedCliente.prefixoIPv6.join(', ')}</p>
-                        )}
+                    <div className="flex flex-1 items-center gap-12">
+                      <div>
+                        <h3 className="text-2xl font-bold text-white">{selectedCliente.nomeFantasia}</h3>
+                        <p className="text-zinc-400 text-sm mt-1">CNPJ: {selectedCliente.cnpj || 'N/A'}</p>
                       </div>
+
+                      {Array.isArray(selectedCliente.infraestrutura) && selectedCliente.infraestrutura.length > 0 && (
+                        <div className="hidden md:flex flex-col gap-1 border-l border-zinc-800 pl-12">
+                          <div className="flex items-center gap-3">
+                            <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest w-8">ASN</span>
+                            <span className="text-sm text-zinc-300 font-medium">
+                              {selectedCliente.infraestrutura.map(i => i.asn).filter(Boolean).join(', ') || 'N/A'}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest w-8">IPv4</span>
+                            <span className="text-sm text-zinc-300 font-medium">
+                              {selectedCliente.infraestrutura.map(i => i.ipv4).filter(Boolean).join(', ') || 'N/A'}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest w-8">IPv6</span>
+                            <span className="text-sm text-zinc-300 font-medium">
+                              {selectedCliente.infraestrutura.map(i => i.ipv6).filter(Boolean).join(', ') || 'N/A'}
+                            </span>
+                          </div>
+                        </div>
+                      )}
                     </div>
                     {dbUser?.role !== 'viewer' && (
                       <button 
@@ -2168,9 +2195,24 @@ function ClienteForm({ onClose, user, initialData }: { onClose: () => void, user
     nocNome: initialData?.nocNome || '',
     nocTelefone: initialData?.nocTelefone || '',
     nocEmail: initialData?.nocEmail || '',
-    asn: Array.isArray(initialData?.asn) ? initialData.asn : (initialData?.asn ? [initialData.asn] : ['']),
-    prefixoIPv4: Array.isArray(initialData?.prefixoIPv4) ? initialData.prefixoIPv4 : (initialData?.prefixoIPv4 ? [initialData.prefixoIPv4] : ['']),
-    prefixoIPv6: Array.isArray(initialData?.prefixoIPv6) ? initialData.prefixoIPv6 : (initialData?.prefixoIPv6 ? [initialData.prefixoIPv6] : ['']),
+    infraestrutura: initialData?.infraestrutura || (
+      // Migração de dados antigos
+      Array.isArray((initialData as any)?.asn) || Array.isArray((initialData as any)?.prefixoIPv4) || Array.isArray((initialData as any)?.prefixoIPv6) 
+        ? Array.from({ length: Math.max(
+            Array.isArray((initialData as any)?.asn) ? (initialData as any).asn.length : 0,
+            Array.isArray((initialData as any)?.prefixoIPv4) ? (initialData as any).prefixoIPv4.length : 0,
+            Array.isArray((initialData as any)?.prefixoIPv6) ? (initialData as any).prefixoIPv6.length : 0
+          ) || 1 }).map((_, i) => ({
+            asn: ((initialData as any)?.asn)?.[i] || '',
+            ipv4: ((initialData as any)?.prefixoIPv4)?.[i] || '',
+            ipv6: ((initialData as any)?.prefixoIPv6)?.[i] || ''
+          }))
+        : [{ 
+            asn: (initialData as any)?.asn || '', 
+            ipv4: (initialData as any)?.prefixoIPv4 || '', 
+            ipv6: (initialData as any)?.prefixoIPv6 || '' 
+          }]
+    ),
     cep: initialData?.cep || '',
     pais: initialData?.pais || '',
     estado: initialData?.estado || '',
@@ -2188,9 +2230,9 @@ function ClienteForm({ onClose, user, initialData }: { onClose: () => void, user
     try {
       const clienteData = {
         ...formData,
-        asn: formData.asn.filter(v => v.trim() !== ''),
-        prefixoIPv4: formData.prefixoIPv4.filter(v => v.trim() !== ''),
-        prefixoIPv6: formData.prefixoIPv6.filter(v => v.trim() !== ''),
+        infraestrutura: formData.infraestrutura.filter(row => 
+          row.asn.trim() !== '' || row.ipv4.trim() !== '' || row.ipv6.trim() !== ''
+        ),
         uid: user.uid,
         createdAt: initialData?.createdAt || serverTimestamp(),
       };
@@ -2402,136 +2444,80 @@ function ClienteForm({ onClose, user, initialData }: { onClose: () => void, user
           </div>
 
           {/* Infrastructure Information */}
-          <div className="space-y-4">
-            <h4 className="text-sm font-bold text-emerald-500 uppercase tracking-wider flex items-center gap-2">
-              <Network size={16} /> Infraestrutura
-            </h4>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* ASN Section */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">ASN Number</label>
-                  <button 
-                    type="button"
-                    onClick={() => setFormData({...formData, asn: [...formData.asn, '']})}
-                    className="text-[10px] font-bold text-emerald-500 hover:text-emerald-400 uppercase tracking-widest flex items-center gap-1"
-                  >
-                    <Plus size={10} /> Adicionar
-                  </button>
-                </div>
-                <div className="space-y-2">
-                  {formData.asn.map((value, index) => (
-                    <div key={index} className="flex gap-2">
-                      <input 
-                        value={value}
-                        onChange={e => {
-                          const newAsn = [...formData.asn];
-                          newAsn[index] = e.target.value;
-                          setFormData({...formData, asn: newAsn});
-                        }}
-                        className="flex-1 bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50"
-                        placeholder="Ex: ASN266169"
-                      />
-                      {formData.asn.length > 1 && (
-                        <button 
-                          type="button"
-                          onClick={() => {
-                            const newAsn = formData.asn.filter((_, i) => i !== index);
-                            setFormData({...formData, asn: newAsn});
-                          }}
-                          className="p-2.5 text-zinc-500 hover:text-red-500 bg-zinc-950 border border-zinc-800 rounded-xl transition-colors"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h4 className="text-sm font-bold text-emerald-500 uppercase tracking-wider flex items-center gap-2">
+                <Network size={16} /> Infraestrutura (ASN / IPv4 / IPv6)
+              </h4>
+              <button 
+                type="button"
+                onClick={() => setFormData({
+                  ...formData, 
+                  infraestrutura: [...formData.infraestrutura, { asn: '', ipv4: '', ipv6: '' }]
+                })}
+                className="px-4 py-2 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 rounded-xl text-xs font-bold uppercase tracking-widest transition-colors flex items-center gap-2"
+              >
+                <Plus size={14} /> ADICIONAR PREFIXO
+              </button>
+            </div>
 
-              {/* IPv4 Section */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Prefixo IPv4</label>
-                  <button 
-                    type="button"
-                    onClick={() => setFormData({...formData, prefixoIPv4: [...formData.prefixoIPv4, '']})}
-                    className="text-[10px] font-bold text-emerald-500 hover:text-emerald-400 uppercase tracking-widest flex items-center gap-1"
-                  >
-                    <Plus size={10} /> Adicionar
-                  </button>
+            <div className="space-y-4">
+              {formData.infraestrutura.map((row, index) => (
+                <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-zinc-950/50 border border-zinc-800 rounded-2xl relative group/row">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">ASN Number</label>
+                    <input 
+                      value={row.asn}
+                      onChange={e => {
+                        const newInfra = [...formData.infraestrutura];
+                        newInfra[index].asn = e.target.value;
+                        setFormData({...formData, infraestrutura: newInfra});
+                      }}
+                      placeholder="Ex: AS264926"
+                      className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Prefixo IPv4</label>
+                    <input 
+                      value={row.ipv4}
+                      onChange={e => {
+                        const newInfra = [...formData.infraestrutura];
+                        newInfra[index].ipv4 = e.target.value;
+                        setFormData({...formData, infraestrutura: newInfra});
+                      }}
+                      placeholder="Ex: 168.228.176.0/22"
+                      className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Prefixo IPv6</label>
+                    <input 
+                      value={row.ipv6}
+                      onChange={e => {
+                        const newInfra = [...formData.infraestrutura];
+                        newInfra[index].ipv6 = e.target.value;
+                        setFormData({...formData, infraestrutura: newInfra});
+                      }}
+                      placeholder="Ex: 2804:3004::/32"
+                      className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50"
+                    />
+                  </div>
+                  
+                  {formData.infraestrutura.length > 1 && (
+                    <button 
+                      type="button"
+                      onClick={() => {
+                        const newInfra = formData.infraestrutura.filter((_, i) => i !== index);
+                        setFormData({...formData, infraestrutura: newInfra});
+                      }}
+                      className="absolute -right-2 -top-2 p-1.5 bg-zinc-900 text-zinc-500 hover:text-red-500 border border-zinc-800 rounded-full opacity-0 group-hover/row:opacity-100 transition-all shadow-lg"
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
                 </div>
-                <div className="space-y-2">
-                  {formData.prefixoIPv4.map((value, index) => (
-                    <div key={index} className="flex gap-2">
-                      <input 
-                        value={value}
-                        onChange={e => {
-                          const newIpv4 = [...formData.prefixoIPv4];
-                          newIpv4[index] = e.target.value;
-                          setFormData({...formData, prefixoIPv4: newIpv4});
-                        }}
-                        className="flex-1 bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50"
-                        placeholder="Ex: 45.6.191.0/24"
-                      />
-                      {formData.prefixoIPv4.length > 1 && (
-                        <button 
-                          type="button"
-                          onClick={() => {
-                            const newIpv4 = formData.prefixoIPv4.filter((_, i) => i !== index);
-                            setFormData({...formData, prefixoIPv4: newIpv4});
-                          }}
-                          className="p-2.5 text-zinc-500 hover:text-red-500 bg-zinc-950 border border-zinc-800 rounded-xl transition-colors"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* IPv6 Section */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Prefixo IPv6</label>
-                  <button 
-                    type="button"
-                    onClick={() => setFormData({...formData, prefixoIPv6: [...formData.prefixoIPv6, '']})}
-                    className="text-[10px] font-bold text-emerald-500 hover:text-emerald-400 uppercase tracking-widest flex items-center gap-1"
-                  >
-                    <Plus size={10} /> Adicionar
-                  </button>
-                </div>
-                <div className="space-y-2">
-                  {formData.prefixoIPv6.map((value, index) => (
-                    <div key={index} className="flex gap-2">
-                      <input 
-                        value={value}
-                        onChange={e => {
-                          const newIpv6 = [...formData.prefixoIPv6];
-                          newIpv6[index] = e.target.value;
-                          setFormData({...formData, prefixoIPv6: newIpv6});
-                        }}
-                        className="flex-1 bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50"
-                        placeholder="Ex: 2804:1234::/32"
-                      />
-                      {formData.prefixoIPv6.length > 1 && (
-                        <button 
-                          type="button"
-                          onClick={() => {
-                            const newIpv6 = formData.prefixoIPv6.filter((_, i) => i !== index);
-                            setFormData({...formData, prefixoIPv6: newIpv6});
-                          }}
-                          className="p-2.5 text-zinc-500 hover:text-red-500 bg-zinc-950 border border-zinc-800 rounded-xl transition-colors"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
+              ))}
             </div>
           </div>
         </form>
