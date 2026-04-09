@@ -1150,10 +1150,24 @@ export default function App() {
 
     const TextField = ({ label, value }: { label: string, value?: string }) => {
       if (!value) return null;
+      const isUrl = value.startsWith('http://') || value.startsWith('https://');
+      
       return (
         <div className="flex items-center justify-between bg-zinc-950 px-3 py-2 rounded-lg border border-zinc-800/50">
           <span className="text-zinc-500 text-xs font-bold uppercase">{label}</span>
-          <span className="text-zinc-300 font-mono text-xs">{value}</span>
+          {isUrl ? (
+            <a 
+              href={value} 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="text-emerald-400 hover:text-emerald-300 font-mono text-xs flex items-center gap-1.5 transition-colors"
+            >
+              {value}
+              <ExternalLink size={12} />
+            </a>
+          ) : (
+            <span className="text-zinc-300 font-mono text-xs">{value}</span>
+          )}
         </div>
       );
     };
