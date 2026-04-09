@@ -1385,6 +1385,32 @@ export default function App() {
   const AtivoCard = ({ ativo, dbUser, onEdit, onDelete }: { ativo: Ativo, dbUser: DBUser | null, onEdit: () => void, onDelete: () => void }) => {
     const [isExpanded, setIsExpanded] = useState(false);
     const [visiblePasswords, setVisiblePasswords] = useState<Set<string>>(new Set());
+    const [copiedSsh, setCopiedSsh] = useState(false);
+
+    const handleCopySsh = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      const address = ativo.ipv4Hostname || ativo.urlFqdnDomain;
+      if (!address) return;
+      
+      const user = ativo.sshUser ? `${ativo.sshUser}@` : '';
+      const port = ativo.sshPort ? ` -p ${ativo.sshPort}` : '';
+      const command = `ssh ${user}${address}${port}`;
+      
+      navigator.clipboard.writeText(command);
+      setCopiedSsh(true);
+      setTimeout(() => setCopiedSsh(false), 2000);
+    };
+
+    const handleConnectSsh = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      const address = ativo.ipv4Hostname || ativo.urlFqdnDomain;
+      if (!address) return;
+      
+      const user = ativo.sshUser ? `${ativo.sshUser}@` : '';
+      const port = ativo.sshPort ? `:${ativo.sshPort}` : '';
+      // Protocolo ssh://user@host:port
+      window.location.href = `ssh://${user}${address}${port}`;
+    };
 
     const togglePassword = (field: string) => {
       setVisiblePasswords(prev => {
@@ -1490,7 +1516,29 @@ export default function App() {
         </div>
 
         <div className="space-y-2 text-sm">
-          <TextField label="Endereço" value={ativo.ipv4Hostname || ativo.urlFqdnDomain} />
+          <div className="flex items-center gap-2">
+            <div className="flex-1">
+              <TextField label="Endereço" value={ativo.ipv4Hostname || ativo.urlFqdnDomain} />
+            </div>
+            {(ativo.ipv4Hostname || ativo.urlFqdnDomain) && (
+              <div className="flex gap-1">
+                <button
+                  onClick={handleConnectSsh}
+                  className="p-2 bg-zinc-950 border border-zinc-800/50 rounded-lg text-emerald-500 hover:bg-emerald-500/10 transition-all"
+                  title="Conectar via SSH (Protocolo Local)"
+                >
+                  <Terminal size={14} />
+                </button>
+                <button
+                  onClick={handleCopySsh}
+                  className={`p-2 bg-zinc-950 border border-zinc-800/50 rounded-lg transition-all ${copiedSsh ? 'text-emerald-500 bg-emerald-500/10' : 'text-zinc-500 hover:text-white hover:bg-zinc-800'}`}
+                  title="Copiar Comando SSH"
+                >
+                  {copiedSsh ? <CheckCircle2 size={14} /> : <Copy size={14} />}
+                </button>
+              </div>
+            )}
+          </div>
           
           {isExpanded && (
             <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="space-y-2 pt-2 border-t border-zinc-800 mt-2">
