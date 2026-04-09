@@ -1214,11 +1214,11 @@ export default function App() {
 
         <div className="space-y-2 text-sm">
           <TextField label="Endereço" value={ativo.ipv4Hostname || ativo.urlFqdnDomain} />
-          <TextField label="SSH User" value={ativo.sshUser} />
-          <TextField label="Web User" value={ativo.otherUser} />
           
           {isExpanded && (
             <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="space-y-2 pt-2 border-t border-zinc-800 mt-2">
+              <TextField label="SSH User" value={ativo.sshUser} />
+              <TextField label="Web User" value={ativo.otherUser} />
               <PasswordField label="SSH Pass" value={ativo.sshPassword || ''} fieldKey="sshPassword" />
               <PasswordField label="Web Pass" value={ativo.otherPassword || ''} fieldKey="otherPassword" />
               <TextField label="Porta SSH" value={ativo.sshPort} />
@@ -1346,7 +1346,7 @@ export default function App() {
 
     return (
       <div className="flex-1 flex flex-col p-8 bg-zinc-950 overflow-y-auto">
-        <div className="max-w-6xl w-full mx-auto space-y-8">
+        <div className="max-w-[1800px] w-full mx-auto space-y-8">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-3xl font-bold tracking-tight text-white flex items-center gap-3">
@@ -1357,7 +1357,7 @@ export default function App() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-8">
             {/* Clients List */}
             {dbUser?.role !== 'cliente' && (
               <div className="lg:col-span-1 space-y-4">
@@ -1400,7 +1400,7 @@ export default function App() {
             )}
 
             {/* Assets List */}
-            <div className={`${dbUser?.role === 'cliente' ? 'lg:col-span-4' : 'lg:col-span-3'} space-y-6`}>
+            <div className={`${dbUser?.role === 'cliente' ? 'lg:col-span-4 xl:col-span-5 2xl:col-span-6' : 'lg:col-span-3 xl:col-span-4 2xl:col-span-5'} space-y-6`}>
               {selectedCliente ? (
                 <>
                   <div className="flex items-center justify-between bg-zinc-900 p-6 rounded-2xl border border-zinc-800">
@@ -1482,7 +1482,7 @@ export default function App() {
                           <Paperclip size={20} /> Documentos da Empresa
                         </h4>
                       </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
                         {selectedCliente.documentos.map((doc, idx) => (
                           <div key={idx} className="flex items-center justify-between p-4 bg-zinc-900 border border-zinc-800 rounded-2xl group hover:border-emerald-500/30 transition-all">
                             <div className="flex items-center gap-3 min-w-0">
@@ -1552,7 +1552,7 @@ export default function App() {
                           <motion.div 
                             initial={{ opacity: 0, y: -10 }}
                             animate={{ opacity: 1, y: 0 }}
-                            className="grid grid-cols-1 xl:grid-cols-2 gap-4"
+                            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-3 3xl:grid-cols-4 gap-4"
                           >
                             {ativosCategoria.map(ativo => (
                               <AtivoCard 
