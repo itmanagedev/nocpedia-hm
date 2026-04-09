@@ -2440,6 +2440,33 @@ export default function App() {
                   className="w-full bg-zinc-900 border border-zinc-800 rounded-xl py-2 pl-10 pr-4 text-sm focus:outline-none focus:border-emerald-500/50 transition-colors"
                 />
               </div>
+
+              <div className="flex items-center gap-2">
+                {dbUser?.role !== 'cliente' && (
+                  <button 
+                    onClick={() => setCurrentView('configuracoes')}
+                    className="p-2 rounded-xl transition-all border border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800"
+                    title="Configurações"
+                  >
+                    <Settings size={18} />
+                  </button>
+                )}
+                <button 
+                  onClick={() => setCurrentView('acessos')}
+                  className={`p-2 rounded-xl transition-all border border-zinc-800 ${currentView === 'acessos' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}
+                  title="Acessos"
+                >
+                  <Network size={18} />
+                </button>
+                <button 
+                  onClick={handleLogout}
+                  className="p-2 text-zinc-400 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition-all border border-zinc-800"
+                  title="Sair"
+                >
+                  <LogOut size={18} />
+                </button>
+              </div>
+
               {isAdmin ? (
                 <div className="flex items-center gap-2">
                   <button 
