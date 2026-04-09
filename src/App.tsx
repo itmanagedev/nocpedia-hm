@@ -1560,6 +1560,18 @@ export default function App() {
       });
     };
 
+    const downloadBackup = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (!ativo.backupFileContent || !ativo.backupFileName) return;
+      
+      const link = document.createElement('a');
+      link.href = ativo.backupFileContent;
+      link.download = ativo.backupFileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    };
+
     const PasswordField = ({ label, value, fieldKey }: { label: string, value: string, fieldKey: string }) => {
       if (!value) return null;
       const isVisible = visiblePasswords.has(fieldKey);
@@ -1710,6 +1722,22 @@ export default function App() {
               <TextField label="SNMP Community" value={ativo.snmpCommunity} />
               <PasswordField label="Console Pass" value={ativo.consolePassword || ''} fieldKey="consolePassword" />
               
+              {ativo.backupFileName && (
+                <div className="flex items-center justify-between bg-zinc-950 px-3 py-2 rounded-lg border border-zinc-800/50">
+                  <div className="flex items-center gap-2">
+                    <Save size={14} className="text-emerald-500" />
+                    <span className="text-zinc-500 text-xs font-bold uppercase">Backup</span>
+                  </div>
+                  <button 
+                    onClick={downloadBackup}
+                    className="flex items-center gap-2 text-emerald-400 hover:text-emerald-300 transition-colors"
+                  >
+                    <span className="text-[10px] font-mono truncate max-w-[150px]">{ativo.backupFileName}</span>
+                    <Download size={14} />
+                  </button>
+                </div>
+              )}
+
               {ativo.categoriaAcesso === 'Network Topologia' && (
                 <>
                   {ativo.networkTopologyLink && (
@@ -3278,6 +3306,11 @@ function AtivoForm({ onClose, user, clienteId, initialData }: { onClose: () => v
     networkTopologyFileContent: initialData?.networkTopologyFileContent || '',
     networkTopologyFileName: initialData?.networkTopologyFileName || '',
 
+    // Backup de Ativos
+    backupFileContent: initialData?.backupFileContent || '',
+    backupFileName: initialData?.backupFileName || '',
+    backupFileSize: initialData?.backupFileSize || 0,
+
     // Upstream e Downstream / Clientes B2B
     linkType: initialData?.linkType || 'Upstream',
     idCircuito: initialData?.idCircuito || '',
@@ -3822,6 +3855,60 @@ function AtivoForm({ onClose, user, clienteId, initialData }: { onClose: () => v
               onChange={(content) => setFormData({...formData, observacoes: content})}
             />
           </div>
+
+          {formData.categoriaAcesso === 'Network Assets' && (
+            <div className="space-y-4 mt-4">
+              <h4 className="text-sm font-bold text-emerald-500 uppercase tracking-wider flex items-center gap-2">
+                <Save size={16} /> Backup do Ativo
+              </h4>
+              <div className="grid grid-cols-1 gap-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Arquivo de Backup (Upload)</label>
+                  <input 
+                    type="file"
+                    onChange={e => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        if (file.size > 800000) {
+                          alert('O arquivo é muito grande. O limite é de 800KB.');
+                          return;
+                        }
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                          setFormData({
+                            ...formData, 
+                            backupFileContent: event.target?.result as string,
+                            backupFileName: file.name,
+                            backupFileSize: file.size
+                          });
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-emerald-500/10 file:text-emerald-500 hover:file:bg-emerald-500/20"
+                  />
+                  {formData.backupFileName && (
+                    <div className="flex items-center justify-between bg-zinc-950/50 p-3 rounded-xl border border-zinc-800/50 mt-2">
+                      <div className="flex items-center gap-2">
+                        <FileText size={16} className="text-emerald-500" />
+                        <div className="flex flex-col">
+                          <span className="text-xs font-medium text-white">{formData.backupFileName}</span>
+                          <span className="text-[10px] text-zinc-500 uppercase">{(formData.backupFileSize / 1024).toFixed(1)} KB</span>
+                        </div>
+                      </div>
+                      <button 
+                        type="button"
+                        onClick={() => setFormData({...formData, backupFileContent: '', backupFileName: '', backupFileSize: 0})}
+                        className="text-zinc-500 hover:text-red-400 p-1"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </form>
 
         <div className="p-6 border-t border-zinc-800 flex justify-end gap-3 bg-zinc-900/50">

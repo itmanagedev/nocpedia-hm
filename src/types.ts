@@ -31,6 +31,11 @@ export interface Ativo {
   networkTopologyFileContent?: string;
   networkTopologyFileName?: string;
 
+  // Backup de Ativos
+  backupFileContent?: string;
+  backupFileName?: string;
+  backupFileSize?: number;
+
   // Upstream e Downstream / Clientes B2B
   linkType?: string; // 'Upstream' | 'Downstream'
   idCircuito?: string;
