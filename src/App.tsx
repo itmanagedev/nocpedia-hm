@@ -643,7 +643,7 @@ export default function App() {
   });
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFabricante, setSelectedFabricante] = useState<Fabricante | 'All' | 'Group:Redes' | 'Group:Server'>('All');
-  const [expandedGroups, setExpandedGroups] = useState<string[]>(['Redes', 'Server']);
+  const [expandedGroups, setExpandedGroups] = useState<string[]>([]);
 
   const handleGroupClick = (group: 'Redes' | 'Server') => {
     setSelectedFabricante(`Group:${group}` as any);
@@ -3917,31 +3917,43 @@ function UserForm({ onClose, initialData, clientes }: { onClose: () => void, ini
 
             <div className="space-y-2">
               <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Nível de Acesso</label>
-              <select 
-                value={formData.role}
-                onChange={e => setFormData({...formData, role: e.target.value as any})}
-                className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50 text-white appearance-none"
-              >
-                <option value="viewer">Viewer (Leitura)</option>
-                <option value="cliente">Cliente (Acesso Restrito)</option>
-                <option value="admin">Admin (Acesso Total)</option>
-              </select>
+              <div className="relative">
+                <select 
+                  name="role"
+                  value={formData.role}
+                  onChange={e => setFormData({...formData, role: e.target.value as any})}
+                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50 text-white appearance-none"
+                >
+                  <option value="viewer">Viewer (Leitura)</option>
+                  <option value="cliente">Cliente (Acesso Restrito)</option>
+                  <option value="admin">Admin (Acesso Total)</option>
+                </select>
+                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-500">
+                  <ChevronDown size={14} />
+                </div>
+              </div>
             </div>
 
             {formData.role === 'cliente' && (
               <div className="space-y-2">
                 <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Vincular ao Cliente</label>
-                <select 
-                  required
-                  value={formData.clienteId}
-                  onChange={e => setFormData({...formData, clienteId: e.target.value})}
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50 text-white appearance-none"
-                >
-                  <option value="">Selecione um cliente...</option>
-                  {clientes.map(c => (
-                    <option key={c.id} value={c.id}>{c.nomeFantasia}</option>
-                  ))}
-                </select>
+                <div className="relative">
+                  <select 
+                    required
+                    name="clienteId"
+                    value={formData.clienteId}
+                    onChange={e => setFormData({...formData, clienteId: e.target.value})}
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50 text-white appearance-none"
+                  >
+                    <option value="">Selecione um cliente...</option>
+                    {clientes.map(c => (
+                      <option key={c.id} value={c.id}>{c.nomeFantasia}</option>
+                    ))}
+                  </select>
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-500">
+                    <ChevronDown size={14} />
+                  </div>
+                </div>
               </div>
             )}
           </div>
