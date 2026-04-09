@@ -57,7 +57,8 @@ import {
   Download,
   History,
   Clock,
-  RotateCcw
+  RotateCcw,
+  HelpCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -476,6 +477,124 @@ const ShortcutItem = ({
   );
 };
 
+const SshHelpModal = ({ isOpen, onClose, addToast }: { isOpen: boolean, onClose: () => void, addToast: (msg: string, type?: any) => void }) => {
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="bg-zinc-900 border border-zinc-800 w-full max-w-2xl rounded-2xl overflow-hidden shadow-2xl"
+          >
+            <div className="p-6 border-b border-zinc-800 flex items-center justify-between bg-zinc-900/50">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-emerald-500/10 rounded-lg text-emerald-500">
+                  <Terminal size={20} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white">Configurar Acesso SSH</h3>
+                  <p className="text-xs text-zinc-500">Guia para Windows 11 e Termius</p>
+                </div>
+              </div>
+              <button 
+                onClick={onClose}
+                className="p-2 hover:bg-zinc-800 rounded-lg text-zinc-500 transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
+              <section className="space-y-3">
+                <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                  <div className="w-1 h-4 bg-emerald-500 rounded-full" />
+                  Opção Recomendada: Termius
+                </h4>
+                <div className="bg-zinc-950 p-4 rounded-xl border border-zinc-800/50 space-y-3">
+                  <p className="text-sm text-zinc-400">
+                    O Termius é o cliente mais moderno e compatível com o NOCPedia.
+                  </p>
+                  <ol className="text-sm text-zinc-400 space-y-2 list-decimal list-inside">
+                    <li>Instale o <a href="https://termius.com/" target="_blank" className="text-emerald-500 hover:underline">Termius Desktop</a>.</li>
+                    <li>No Windows, vá em <strong>Configurações &gt; Aplicativos &gt; Aplicativos Padrão</strong>.</li>
+                    <li>Clique em <strong>Escolher os padrões por tipo de link</strong> (no final da página).</li>
+                    <li>Busque por <strong>SSH</strong> e selecione o <strong>Termius</strong>.</li>
+                  </ol>
+                </div>
+              </section>
+
+              <section className="space-y-3">
+                <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                  <div className="w-1 h-4 bg-blue-500 rounded-full" />
+                  Opção 2: Windows Terminal (Nativo)
+                </h4>
+                <div className="bg-zinc-950 p-4 rounded-xl border border-zinc-800/50 space-y-3">
+                  <p className="text-sm text-zinc-400">
+                    Se você prefere o terminal padrão do Windows, use o script abaixo para registrar o protocolo.
+                  </p>
+                  <div className="relative group">
+                    <pre className="text-[10px] font-mono text-zinc-500 bg-black/50 p-3 rounded-lg overflow-x-auto border border-zinc-800">
+{`Windows Registry Editor Version 5.00
+
+[HKEY_CLASSES_ROOT\\ssh]
+"URL Protocol"=""
+@="URL:ssh Protocol"
+
+[HKEY_CLASSES_ROOT\\ssh\\shell\\open\\command]
+@="powershell.exe -NoProfile -Command \\"$u='%1'; $t=$u -replace 'ssh://',''; $t=$t.TrimEnd('/'); cmd /c title SSH Connection && ssh $t\\""`}
+                    </pre>
+                    <button
+                      onClick={() => {
+                        const reg = `Windows Registry Editor Version 5.00\n\n[HKEY_CLASSES_ROOT\\ssh]\n"URL Protocol"=""\n@="URL:ssh Protocol"\n\n[HKEY_CLASSES_ROOT\\ssh\\shell\\open\\command]\n@="powershell.exe -NoProfile -Command \\"$u='%1'; $t=$u -replace 'ssh://',''; $t=$t.TrimEnd('/'); cmd /c title SSH Connection && ssh $t\\""`;
+                        navigator.clipboard.writeText(reg);
+                        addToast("Script copiado! Salve como .reg e execute.");
+                      }}
+                      className="absolute top-2 right-2 p-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-zinc-400 hover:text-white transition-all opacity-0 group-hover:opacity-100"
+                      title="Copiar Script .reg"
+                    >
+                      <Copy size={14} />
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-amber-500/80 flex items-center gap-2">
+                    <AlertTriangle size={12} />
+                    Salve o conteúdo acima em um arquivo <strong>.reg</strong> e execute como administrador.
+                  </p>
+                </div>
+              </section>
+
+              <div className="bg-emerald-500/5 border border-emerald-500/20 p-4 rounded-xl">
+                <div className="flex gap-3">
+                  <div className="p-2 bg-emerald-500/10 rounded-lg text-emerald-500 h-fit">
+                    <Info size={16} />
+                  </div>
+                  <div>
+                    <h5 className="text-sm font-bold text-emerald-500">Dica de Fluxo</h5>
+                    <p className="text-xs text-emerald-500/70 mt-1 leading-relaxed">
+                      Ao clicar no botão de SSH, o NOCPedia <strong>copia automaticamente o comando</strong> para o seu clipboard. 
+                      Se o terminal não abrir, basta dar um Ctrl+V no seu terminal favorito.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 bg-zinc-900/50 border-t border-zinc-800 flex justify-end">
+              <button
+                onClick={onClose}
+                className="px-6 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl font-bold transition-all"
+              >
+                Entendi
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
+  );
+};
+
 interface Toast {
   id: string;
   message: string;
@@ -503,6 +622,8 @@ export default function App() {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [backupsList, setBackupsList] = useState<Backup[]>([]);
   const [isRestoring, setIsRestoring] = useState(false);
+
+  const [showSshHelp, setShowSshHelp] = useState(false);
 
   const addToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
     const id = Math.random().toString(36).substring(2, 9);
@@ -1382,7 +1503,7 @@ export default function App() {
 
   const [searchAtivoQuery, setSearchAtivoQuery] = useState('');
 
-  const AtivoCard = ({ ativo, dbUser, onEdit, onDelete }: { ativo: Ativo, dbUser: DBUser | null, onEdit: () => void, onDelete: () => void }) => {
+  const AtivoCard = ({ ativo, dbUser, onEdit, onDelete, onShowHelp }: { ativo: Ativo, dbUser: DBUser | null, onEdit: () => void, onDelete: () => void, onShowHelp: () => void }) => {
     const [isExpanded, setIsExpanded] = useState(false);
     const [visiblePasswords, setVisiblePasswords] = useState<Set<string>>(new Set());
     const [copiedSsh, setCopiedSsh] = useState(false);
@@ -1409,7 +1530,14 @@ export default function App() {
       
       const user = ativo.sshUser ? `${ativo.sshUser}@` : '';
       const port = ativo.sshPort ? `:${ativo.sshPort}` : '';
-      // Protocolo ssh://user@host:port
+      
+      // Copiar comando como fallback imediato
+      const sshCommand = `ssh ${ativo.sshUser ? `${ativo.sshUser}@` : ''}${address}${ativo.sshPort ? ` -p ${ativo.sshPort}` : ''}`;
+      navigator.clipboard.writeText(sshCommand);
+      setCopiedSsh(true);
+      setTimeout(() => setCopiedSsh(false), 2000);
+
+      // Tentar abrir o protocolo
       window.location.href = `ssh://${user}${address}${port}`;
     };
 
@@ -1533,21 +1661,13 @@ export default function App() {
             </div>
             {(ativo.ipv4Hostname || ativo.urlFqdnDomain) && (
               <div className="flex gap-1">
-                {(() => {
-                  const address = ativo.ipv4Hostname || ativo.urlFqdnDomain;
-                  const user = ativo.sshUser ? `${ativo.sshUser}@` : '';
-                  const port = ativo.sshPort ? `:${ativo.sshPort}` : '';
-                  return (
-                    <a
-                      href={`ssh://${user}${address}${port}`}
-                      onClick={e => e.stopPropagation()}
-                      className="p-2 bg-zinc-950 border border-zinc-800/50 rounded-lg text-emerald-500 hover:bg-emerald-500/10 transition-all"
-                      title="Conectar via SSH (Requer cliente SSH instalado)"
-                    >
-                      <Terminal size={14} />
-                    </a>
-                  );
-                })()}
+                <button
+                  onClick={handleConnectSsh}
+                  className="p-2 bg-zinc-950 border border-zinc-800/50 rounded-lg text-emerald-500 hover:bg-emerald-500/10 transition-all"
+                  title="Conectar via SSH (Copia comando e tenta abrir terminal)"
+                >
+                  <Terminal size={14} />
+                </button>
                 <button
                   onClick={handleCopySsh}
                   className={`p-2 bg-zinc-950 border border-zinc-800/50 rounded-lg transition-all ${copiedSsh ? 'text-emerald-500 bg-emerald-500/10' : 'text-zinc-500 hover:text-white hover:bg-zinc-800'}`}
@@ -1564,6 +1684,13 @@ export default function App() {
                     {copiedPass ? <CheckCircle2 size={14} /> : <Key size={14} />}
                   </button>
                 )}
+                <button
+                  onClick={(e) => { e.stopPropagation(); onShowHelp(); }}
+                  className="p-2 bg-zinc-950 border border-zinc-800/50 rounded-lg text-zinc-500 hover:text-white hover:bg-zinc-800 transition-all"
+                  title="Ajuda para configurar SSH no Windows"
+                >
+                  <HelpCircle size={14} />
+                </button>
               </div>
             )}
           </div>
@@ -1918,6 +2045,7 @@ export default function App() {
                                     await deleteDoc(doc(db, 'clientes', selectedCliente.id!, 'ativos', ativo.id!));
                                   }
                                 }} 
+                                onShowHelp={() => setShowSshHelp(true)}
                               />
                             ))}
                           </motion.div>
@@ -2605,6 +2733,11 @@ export default function App() {
             />
           )}
         </AnimatePresence>
+        <SshHelpModal 
+          isOpen={showSshHelp} 
+          onClose={() => setShowSshHelp(false)} 
+          addToast={addToast} 
+        />
         <ToastContainer toasts={toasts} />
       </main>
     </div>
