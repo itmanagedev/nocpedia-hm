@@ -1580,21 +1580,25 @@ export default function App() {
       if (!value) return null;
       const isUrl = value.startsWith('http://') || value.startsWith('https://');
       
+      // Abreviação para URLs ou hostnames muito longos
+      const displayValue = value.length > 35 ? value.substring(0, 32) + '...' : value;
+      
       return (
         <div className="flex items-center justify-between bg-zinc-950 px-3 py-2 rounded-lg border border-zinc-800/50">
-          <span className="text-zinc-500 text-xs font-bold uppercase">{label}</span>
+          <span className="text-zinc-500 text-xs font-bold uppercase shrink-0 mr-2">{label}</span>
           {isUrl ? (
             <a 
               href={value} 
               target="_blank" 
               rel="noopener noreferrer" 
-              className="text-emerald-400 hover:text-emerald-300 font-mono text-xs flex items-center gap-1.5 transition-colors"
+              className="text-emerald-400 hover:text-emerald-300 font-mono text-xs flex items-center gap-1.5 transition-colors truncate"
+              title={value}
             >
-              {value}
-              <ExternalLink size={12} />
+              <span className="truncate">{displayValue}</span>
+              <ExternalLink size={12} className="shrink-0" />
             </a>
           ) : (
-            <span className="text-zinc-300 font-mono text-xs">{value}</span>
+            <span className="text-zinc-300 font-mono text-xs truncate" title={value}>{displayValue}</span>
           )}
         </div>
       );
@@ -2001,6 +2005,32 @@ export default function App() {
                         a.fabricante?.toLowerCase().includes(query) ||
                         a.modelo?.toLowerCase().includes(query)
                       );
+                    }).sort((a, b) => {
+                      // Regra especial para Network Assets: Ordem Alfabética
+                      if (categoria === 'Network Assets') {
+                        return (a.nome || '').localeCompare(b.nome || '');
+                      }
+                      
+                      // Regra Geral: Por TIPO (prioridade) depois Alfabética
+                      const typePriority: Record<string, number> = {
+                        'Router': 1,
+                        'CGNAT': 2,
+                        'Switch': 3,
+                        'OLT': 4,
+                        'Firewall': 5,
+                        'Servidor': 6,
+                        'VM': 7,
+                        'Container': 8
+                      };
+                      
+                      const priorityA = typePriority[a.tipo || ''] || 999;
+                      const priorityB = typePriority[b.tipo || ''] || 999;
+                      
+                      if (priorityA !== priorityB) {
+                        return priorityA - priorityB;
+                      }
+                      
+                      return (a.nome || '').localeCompare(b.nome || '');
                     });
                     
                     if (ativosCategoria.length === 0) return null;
