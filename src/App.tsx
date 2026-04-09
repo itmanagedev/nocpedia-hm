@@ -1584,31 +1584,31 @@ export default function App() {
       const displayValue = value.length > 35 ? value.substring(0, 32) + '...' : value;
       
       return (
-        <div className="flex items-center justify-between bg-zinc-950 px-3 py-2 rounded-lg border border-zinc-800/50">
-          <span className="text-zinc-500 text-xs font-bold uppercase shrink-0 mr-2">{label}</span>
+        <div className="flex items-center justify-between bg-zinc-950 px-3 py-2 rounded-lg border border-zinc-800/50 w-full overflow-hidden">
+          <span className="text-zinc-500 text-[10px] sm:text-xs font-bold uppercase shrink-0 mr-2">{label}</span>
           {isUrl ? (
             <a 
               href={value} 
               target="_blank" 
               rel="noopener noreferrer" 
-              className="text-emerald-400 hover:text-emerald-300 font-mono text-xs flex items-center gap-1.5 transition-colors truncate"
+              className="text-emerald-400 hover:text-emerald-300 font-mono text-[10px] sm:text-xs flex items-center gap-1.5 transition-colors truncate"
               title={value}
             >
               <span className="truncate">{displayValue}</span>
               <ExternalLink size={12} className="shrink-0" />
             </a>
           ) : (
-            <span className="text-zinc-300 font-mono text-xs truncate" title={value}>{displayValue}</span>
+            <span className="text-zinc-300 font-mono text-[10px] sm:text-xs truncate" title={value}>{displayValue}</span>
           )}
         </div>
       );
     };
 
     return (
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 hover:border-emerald-500/30 transition-colors group">
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-zinc-800 rounded-lg text-zinc-400">
+      <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3 sm:p-5 hover:border-emerald-500/30 transition-colors group">
+        <div className="flex items-start justify-between mb-3 sm:mb-4">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <div className="p-1.5 sm:p-2 bg-zinc-800 rounded-lg text-zinc-400 shrink-0">
               {ativo.categoriaAcesso === 'Servers' ? <Server size={20} /> :
                ativo.categoriaAcesso === 'Web Applications' ? <Globe size={20} /> :
                ativo.categoriaAcesso === 'Network Assets' ? <Network size={20} /> :
@@ -1618,10 +1618,10 @@ export default function App() {
                <Box size={20} />}
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h5 className="font-bold text-white">{ativo.nome}</h5>
+              <div className="flex items-center gap-1 sm:gap-2 min-w-0">
+                <h5 className="font-bold text-white text-sm sm:text-base truncate">{ativo.nome}</h5>
                 {ativo.status && (
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${
+                  <span className={`px-1.5 sm:px-2 py-0.5 rounded-full text-[8px] sm:text-[10px] font-bold uppercase tracking-widest shrink-0 ${
                     ativo.status === 'Ativo' ? 'bg-emerald-500/10 text-emerald-500' :
                     ativo.status === 'Inativo' ? 'bg-red-500/10 text-red-500' :
                     ativo.status === 'Manutenção' ? 'bg-amber-500/10 text-amber-500' :
@@ -1659,12 +1659,12 @@ export default function App() {
         </div>
 
         <div className="space-y-2 text-sm">
-          <div className="flex items-center gap-2">
-            <div className="flex-1">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+            <div className="flex-1 min-w-0">
               <TextField label="Endereço" value={ativo.ipv4Hostname || ativo.urlFqdnDomain} />
             </div>
             {(ativo.ipv4Hostname || ativo.urlFqdnDomain) && (
-              <div className="flex gap-1">
+              <div className="flex gap-1 justify-end sm:justify-start">
                 <button
                   onClick={handleConnectSsh}
                   className="p-2 bg-zinc-950 border border-zinc-800/50 rounded-lg text-emerald-500 hover:bg-emerald-500/10 transition-all"
@@ -1887,18 +1887,18 @@ export default function App() {
             <div className={`${dbUser?.role === 'cliente' ? 'lg:col-span-4 xl:col-span-5 2xl:col-span-6' : 'lg:col-span-3 xl:col-span-4 2xl:col-span-5'} space-y-6`}>
               {selectedCliente ? (
                 <>
-                  <div className="flex items-center justify-between bg-zinc-900 p-6 rounded-2xl border border-zinc-800">
-                    <div className="flex flex-1 items-center gap-12">
-                      <div>
-                        <h3 className="text-2xl font-bold text-white">{selectedCliente.nomeFantasia}</h3>
-                        <p className="text-zinc-400 text-sm mt-1">CNPJ: {selectedCliente.cnpj || 'N/A'}</p>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-zinc-900 p-4 sm:p-6 rounded-2xl border border-zinc-800 gap-4">
+                    <div className="flex flex-1 items-center gap-4 sm:gap-12 min-w-0">
+                      <div className="min-w-0">
+                        <h3 className="text-xl sm:text-2xl font-bold text-white truncate">{selectedCliente.nomeFantasia}</h3>
+                        <p className="text-zinc-400 text-[10px] sm:text-sm mt-0.5 sm:mt-1 truncate">CNPJ: {selectedCliente.cnpj || 'N/A'}</p>
                       </div>
 
                       {(() => {
                         const { asns, ipv4s, ipv6s } = getInfraData(selectedCliente);
                         if (asns.length === 0 && ipv4s.length === 0 && ipv6s.length === 0) return null;
                         return (
-                          <div className="hidden md:flex flex-col gap-1 border-l border-zinc-800 pl-12">
+                          <div className="hidden lg:flex flex-col gap-1 border-l border-zinc-800 pl-12">
                             {asns.length > 0 && (
                               <div className="flex items-center gap-3">
                                 <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest w-8">ASN</span>
@@ -1930,10 +1930,10 @@ export default function App() {
                     {dbUser?.role !== 'viewer' && (
                       <button 
                         onClick={() => setIsAddingAtivo(true)}
-                        className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                        className="bg-emerald-500 hover:bg-emerald-600 text-white px-3 sm:px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shrink-0"
                       >
                         <Plus size={16} />
-                        Novo Acesso
+                        <span className="hidden sm:inline">Novo Acesso</span>
                       </button>
                     )}
                   </div>
@@ -2423,25 +2423,25 @@ export default function App() {
         ) : (
           <>
             {/* Topbar */}
-            <header className="h-16 border-b border-zinc-800 bg-zinc-950/80 backdrop-blur-md flex items-center px-6 gap-4 sticky top-0 z-10">
+            <header className="h-16 border-b border-zinc-800 bg-zinc-950/80 backdrop-blur-md flex items-center px-3 sm:px-6 gap-2 sm:gap-4 sticky top-0 z-10">
               {!isSidebarOpen && (
-                <button onClick={() => setIsSidebarOpen(true)} className="p-2 text-zinc-400 hover:text-white">
+                <button onClick={() => setIsSidebarOpen(true)} className="p-2 text-zinc-400 hover:text-white shrink-0">
                   <Menu size={20} />
                 </button>
               )}
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={18} />
+              <div className="flex-1 relative min-w-0">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={16} />
                 <input 
                   ref={searchInputRef}
                   type="text" 
-                  placeholder="Buscar comandos, fabricantes, tags... (Alt+S)" 
+                  placeholder="Buscar..." 
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-zinc-900 border border-zinc-800 rounded-xl py-2 pl-10 pr-4 text-sm focus:outline-none focus:border-emerald-500/50 transition-colors"
+                  className="w-full bg-zinc-900 border border-zinc-800 rounded-xl py-2 pl-9 pr-4 text-sm focus:outline-none focus:border-emerald-500/50 transition-colors truncate"
                 />
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="hidden md:flex items-center gap-2">
                 {dbUser?.role !== 'cliente' && (
                   <button 
                     onClick={() => setCurrentView('configuracoes')}
@@ -2468,21 +2468,21 @@ export default function App() {
               </div>
 
               {isAdmin ? (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1 sm:gap-2">
                   <button 
                     onClick={() => {
                       if (window.confirm('Deseja sincronizar a base de conhecimento com os novos comandos padrão?')) {
                         seedInitialData(user!.uid);
                       }
                     }}
-                    className="p-2 hover:bg-emerald-500/10 text-zinc-400 hover:text-emerald-500 rounded-xl transition-all border border-zinc-800"
+                    className="p-2 hover:bg-emerald-500/10 text-zinc-400 hover:text-emerald-500 rounded-xl transition-all border border-zinc-800 hidden sm:block"
                     title="Sincronizar Base"
                   >
                     <Layers size={18} />
                   </button>
                   <button 
                     onClick={() => setIsAdding(true)}
-                    className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors shadow-lg shadow-emerald-500/20"
+                    className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white px-3 sm:px-4 py-2 rounded-xl text-sm font-semibold transition-colors shadow-lg shadow-emerald-500/20"
                   >
                     <Plus size={18} />
                     <span className="hidden sm:inline">Adicionar</span>
