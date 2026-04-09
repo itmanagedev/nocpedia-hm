@@ -1386,6 +1386,7 @@ export default function App() {
     const [isExpanded, setIsExpanded] = useState(false);
     const [visiblePasswords, setVisiblePasswords] = useState<Set<string>>(new Set());
     const [copiedSsh, setCopiedSsh] = useState(false);
+    const [copiedPass, setCopiedPass] = useState(false);
 
     const handleCopySsh = (e: React.MouseEvent) => {
       e.stopPropagation();
@@ -1410,6 +1411,16 @@ export default function App() {
       const port = ativo.sshPort ? `:${ativo.sshPort}` : '';
       // Protocolo ssh://user@host:port
       window.location.href = `ssh://${user}${address}${port}`;
+    };
+
+    const handleCopyPass = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      const pass = ativo.sshPassword || ativo.otherPassword || ativo.pppoePassword || ativo.consolePassword;
+      if (!pass) return;
+      
+      navigator.clipboard.writeText(pass);
+      setCopiedPass(true);
+      setTimeout(() => setCopiedPass(false), 2000);
     };
 
     const togglePassword = (field: string) => {
@@ -1522,13 +1533,21 @@ export default function App() {
             </div>
             {(ativo.ipv4Hostname || ativo.urlFqdnDomain) && (
               <div className="flex gap-1">
-                <button
-                  onClick={handleConnectSsh}
-                  className="p-2 bg-zinc-950 border border-zinc-800/50 rounded-lg text-emerald-500 hover:bg-emerald-500/10 transition-all"
-                  title="Conectar via SSH (Protocolo Local)"
-                >
-                  <Terminal size={14} />
-                </button>
+                {(() => {
+                  const address = ativo.ipv4Hostname || ativo.urlFqdnDomain;
+                  const user = ativo.sshUser ? `${ativo.sshUser}@` : '';
+                  const port = ativo.sshPort ? `:${ativo.sshPort}` : '';
+                  return (
+                    <a
+                      href={`ssh://${user}${address}${port}`}
+                      onClick={e => e.stopPropagation()}
+                      className="p-2 bg-zinc-950 border border-zinc-800/50 rounded-lg text-emerald-500 hover:bg-emerald-500/10 transition-all"
+                      title="Conectar via SSH (Requer cliente SSH instalado)"
+                    >
+                      <Terminal size={14} />
+                    </a>
+                  );
+                })()}
                 <button
                   onClick={handleCopySsh}
                   className={`p-2 bg-zinc-950 border border-zinc-800/50 rounded-lg transition-all ${copiedSsh ? 'text-emerald-500 bg-emerald-500/10' : 'text-zinc-500 hover:text-white hover:bg-zinc-800'}`}
@@ -1536,6 +1555,15 @@ export default function App() {
                 >
                   {copiedSsh ? <CheckCircle2 size={14} /> : <Copy size={14} />}
                 </button>
+                {(ativo.sshPassword || ativo.otherPassword || ativo.pppoePassword || ativo.consolePassword) && (
+                  <button
+                    onClick={handleCopyPass}
+                    className={`p-2 bg-zinc-950 border border-zinc-800/50 rounded-lg transition-all ${copiedPass ? 'text-emerald-500 bg-emerald-500/10' : 'text-zinc-500 hover:text-white hover:bg-zinc-800'}`}
+                    title="Copiar Senha de Acesso"
+                  >
+                    {copiedPass ? <CheckCircle2 size={14} /> : <Key size={14} />}
+                  </button>
+                )}
               </div>
             )}
           </div>
