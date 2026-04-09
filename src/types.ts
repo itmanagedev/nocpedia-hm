@@ -114,6 +114,6 @@ export interface DBUser {
 export type Fabricante = 
   "Huawei" | "Cisco" | "Juniper" | "Datacom" | "ZTE" | "Mikrotik" | "Arista" | 
   "Fiberhome" | "Furukawa" | "Hillstone" | "A10" | "DELL" |
-  "VMware" | "Proxmox" |
+  "VMware" | "Proxmox" | "Trello" | "Web" | "Google" | "Microsoft" |
   "Linux" | "Windows Server" | 
   "Docker" | "Kubernetes" | "Desenvolvimento";

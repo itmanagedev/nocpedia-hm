@@ -11,7 +11,7 @@ import { Fabricante } from '../types';
 export const FABRICANTES: Fabricante[] = [
   "Huawei", "Cisco", "Juniper", "Datacom", "ZTE", "Mikrotik", "Arista",
   "Fiberhome", "Furukawa", "Hillstone", "A10", "DELL",
-  "VMware", "Proxmox",
+  "VMware", "Proxmox", "Trello", "Web", "Google", "Microsoft",
   "Linux", "Windows Server", "Docker", "Kubernetes", "Desenvolvimento"
 ];
 
@@ -171,6 +171,38 @@ export const FABRICANTE_DETAILS: Record<string, FabricanteDetail> = {
     equipamentos: ["Cluster Management", "Auto-scaling", "Service Discovery", "Load Balancing"],
     descricao: "Orquestrador de containers de código aberto, originalmente desenvolvido pelo Google.",
     logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/39/Kubernetes_logo_without_workmark.svg/3840px-Kubernetes_logo_without_workmark.svg.png"
+  },
+  "Trello": {
+    nome: "Trello",
+    fundacao: "2011",
+    tempoMercado: "13+ anos",
+    equipamentos: ["Gestão de Projetos", "Kanban"],
+    descricao: "Ferramenta de colaboração que organiza seus projetos em quadros.",
+    logo: "https://cdn-icons-png.flaticon.com/512/2111/2111656.png"
+  },
+  "Web": {
+    nome: "Web Application",
+    fundacao: "N/A",
+    tempoMercado: "N/A",
+    equipamentos: ["SaaS", "Cloud Apps"],
+    descricao: "Aplicações baseadas em navegador e serviços em nuvem.",
+    logo: "https://cdn-icons-png.flaticon.com/512/1006/1006771.png"
+  },
+  "Google": {
+    nome: "Google",
+    fundacao: "1998",
+    tempoMercado: "25+ anos",
+    equipamentos: ["Cloud", "Search", "Workspace"],
+    descricao: "Líder global em serviços e produtos relacionados à Internet.",
+    logo: "https://cdn-icons-png.flaticon.com/512/2991/2991148.png"
+  },
+  "Microsoft": {
+    nome: "Microsoft",
+    fundacao: "1975",
+    tempoMercado: "49+ anos",
+    equipamentos: ["Azure", "Office 365", "Windows"],
+    descricao: "Gigante de tecnologia focada em software, serviços e hardware.",
+    logo: "https://cdn-icons-png.flaticon.com/512/732/732221.png"
   }
 };
 

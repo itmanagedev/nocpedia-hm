@@ -1185,16 +1185,28 @@ export default function App() {
               <p className="text-xs text-zinc-500">{ativo.fabricante} {ativo.modelo}</p>
             </div>
           </div>
-          {dbUser?.role !== 'viewer' && (
-            <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-              <button onClick={onEdit} className="p-1.5 text-zinc-400 hover:text-white bg-zinc-800 rounded-md">
-                <EditIcon size={14} />
-              </button>
-              <button onClick={onDelete} className="p-1.5 text-zinc-400 hover:text-red-400 bg-zinc-800 rounded-md">
-                <TrashIcon size={14} />
-              </button>
-            </div>
-          )}
+          <div className="flex items-center gap-3">
+            {dbUser?.role !== 'viewer' && (
+              <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button onClick={onEdit} className="p-1.5 text-zinc-400 hover:text-white bg-zinc-800 rounded-md">
+                  <EditIcon size={14} />
+                </button>
+                <button onClick={onDelete} className="p-1.5 text-zinc-400 hover:text-red-400 bg-zinc-800 rounded-md">
+                  <TrashIcon size={14} />
+                </button>
+              </div>
+            )}
+            {FABRICANTE_DETAILS[ativo.fabricante] && (
+              <div className="p-1.5 bg-white/5 rounded-lg border border-white/5">
+                <img 
+                  src={FABRICANTE_DETAILS[ativo.fabricante].logo} 
+                  alt="" 
+                  className="w-6 h-6 object-contain opacity-40 group-hover:opacity-100 transition-opacity"
+                  referrerPolicy="no-referrer"
+                />
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="space-y-2 text-sm">
@@ -1291,7 +1303,7 @@ export default function App() {
   };
 
   const AcessosView = () => {
-    const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['Servers', 'Web Applications', 'Network Assets', 'Network Topologia', 'Upstream e Downstream', 'Clientes B2B', 'Outros']));
+    const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
 
     const toggleCategory = (categoria: string) => {
       setExpandedCategories(prev => {
@@ -1739,13 +1751,6 @@ export default function App() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <button 
-                      onClick={toggleTheme}
-                      className="flex-1 flex items-center justify-center gap-2 px-2 py-2 text-xs font-medium text-zinc-400 hover:text-emerald-500 bg-zinc-800/50 hover:bg-zinc-800 rounded-lg transition-colors"
-                      title={theme === 'light' ? 'Modo Escuro' : 'Modo Claro'}
-                    >
-                      {theme === 'light' ? <Moon size={16} /> : <Sun size={16} />}
-                    </button>
                     {dbUser?.role !== 'cliente' && (
                       <button 
                         onClick={() => setCurrentView('configuracoes')}
