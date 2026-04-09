@@ -69,9 +69,9 @@ export interface Cliente {
   nocNome?: string;
   nocTelefone?: string;
   nocEmail?: string;
-  asn?: string;
-  prefixoIPv4?: string;
-  prefixoIPv6?: string;
+  asn: string[];
+  prefixoIPv4: string[];
+  prefixoIPv6: string[];
   cep?: string;
   pais?: string;
   estado?: string;

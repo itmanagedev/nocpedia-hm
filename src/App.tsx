@@ -1361,7 +1361,18 @@ export default function App() {
                   <div className="flex items-center justify-between bg-zinc-900 p-6 rounded-2xl border border-zinc-800">
                     <div>
                       <h3 className="text-2xl font-bold text-white">{selectedCliente.nomeFantasia}</h3>
-                      <p className="text-zinc-400 text-sm mt-1">CNPJ: {selectedCliente.cnpj || 'N/A'}</p>
+                      <div className="flex flex-wrap gap-x-6 gap-y-1 mt-1">
+                        <p className="text-zinc-400 text-sm">CNPJ: {selectedCliente.cnpj || 'N/A'}</p>
+                        {Array.isArray(selectedCliente.asn) && selectedCliente.asn.length > 0 && (
+                          <p className="text-zinc-400 text-sm">ASN: {selectedCliente.asn.join(', ')}</p>
+                        )}
+                        {Array.isArray(selectedCliente.prefixoIPv4) && selectedCliente.prefixoIPv4.length > 0 && (
+                          <p className="text-zinc-400 text-sm">IPv4: {selectedCliente.prefixoIPv4.join(', ')}</p>
+                        )}
+                        {Array.isArray(selectedCliente.prefixoIPv6) && selectedCliente.prefixoIPv6.length > 0 && (
+                          <p className="text-zinc-400 text-sm">IPv6: {selectedCliente.prefixoIPv6.join(', ')}</p>
+                        )}
+                      </div>
                     </div>
                     {dbUser?.role !== 'viewer' && (
                       <button 
@@ -2157,9 +2168,9 @@ function ClienteForm({ onClose, user, initialData }: { onClose: () => void, user
     nocNome: initialData?.nocNome || '',
     nocTelefone: initialData?.nocTelefone || '',
     nocEmail: initialData?.nocEmail || '',
-    asn: initialData?.asn || '',
-    prefixoIPv4: initialData?.prefixoIPv4 || '',
-    prefixoIPv6: initialData?.prefixoIPv6 || '',
+    asn: Array.isArray(initialData?.asn) ? initialData.asn : (initialData?.asn ? [initialData.asn] : ['']),
+    prefixoIPv4: Array.isArray(initialData?.prefixoIPv4) ? initialData.prefixoIPv4 : (initialData?.prefixoIPv4 ? [initialData.prefixoIPv4] : ['']),
+    prefixoIPv6: Array.isArray(initialData?.prefixoIPv6) ? initialData.prefixoIPv6 : (initialData?.prefixoIPv6 ? [initialData.prefixoIPv6] : ['']),
     cep: initialData?.cep || '',
     pais: initialData?.pais || '',
     estado: initialData?.estado || '',
@@ -2177,6 +2188,9 @@ function ClienteForm({ onClose, user, initialData }: { onClose: () => void, user
     try {
       const clienteData = {
         ...formData,
+        asn: formData.asn.filter(v => v.trim() !== ''),
+        prefixoIPv4: formData.prefixoIPv4.filter(v => v.trim() !== ''),
+        prefixoIPv6: formData.prefixoIPv6.filter(v => v.trim() !== ''),
         uid: user.uid,
         createdAt: initialData?.createdAt || serverTimestamp(),
       };
@@ -2392,30 +2406,131 @@ function ClienteForm({ onClose, user, initialData }: { onClose: () => void, user
             <h4 className="text-sm font-bold text-emerald-500 uppercase tracking-wider flex items-center gap-2">
               <Network size={16} /> Infraestrutura
             </h4>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">ASN Number</label>
-                <input 
-                  value={formData.asn}
-                  onChange={e => setFormData({...formData, asn: e.target.value})}
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50"
-                />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* ASN Section */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">ASN Number</label>
+                  <button 
+                    type="button"
+                    onClick={() => setFormData({...formData, asn: [...formData.asn, '']})}
+                    className="text-[10px] font-bold text-emerald-500 hover:text-emerald-400 uppercase tracking-widest flex items-center gap-1"
+                  >
+                    <Plus size={10} /> Adicionar
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {formData.asn.map((value, index) => (
+                    <div key={index} className="flex gap-2">
+                      <input 
+                        value={value}
+                        onChange={e => {
+                          const newAsn = [...formData.asn];
+                          newAsn[index] = e.target.value;
+                          setFormData({...formData, asn: newAsn});
+                        }}
+                        className="flex-1 bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50"
+                        placeholder="Ex: ASN266169"
+                      />
+                      {formData.asn.length > 1 && (
+                        <button 
+                          type="button"
+                          onClick={() => {
+                            const newAsn = formData.asn.filter((_, i) => i !== index);
+                            setFormData({...formData, asn: newAsn});
+                          }}
+                          className="p-2.5 text-zinc-500 hover:text-red-500 bg-zinc-950 border border-zinc-800 rounded-xl transition-colors"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
-              <div className="space-y-2">
-                <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Prefixo IPv4</label>
-                <input 
-                  value={formData.prefixoIPv4}
-                  onChange={e => setFormData({...formData, prefixoIPv4: e.target.value})}
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50"
-                />
+
+              {/* IPv4 Section */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Prefixo IPv4</label>
+                  <button 
+                    type="button"
+                    onClick={() => setFormData({...formData, prefixoIPv4: [...formData.prefixoIPv4, '']})}
+                    className="text-[10px] font-bold text-emerald-500 hover:text-emerald-400 uppercase tracking-widest flex items-center gap-1"
+                  >
+                    <Plus size={10} /> Adicionar
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {formData.prefixoIPv4.map((value, index) => (
+                    <div key={index} className="flex gap-2">
+                      <input 
+                        value={value}
+                        onChange={e => {
+                          const newIpv4 = [...formData.prefixoIPv4];
+                          newIpv4[index] = e.target.value;
+                          setFormData({...formData, prefixoIPv4: newIpv4});
+                        }}
+                        className="flex-1 bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50"
+                        placeholder="Ex: 45.6.191.0/24"
+                      />
+                      {formData.prefixoIPv4.length > 1 && (
+                        <button 
+                          type="button"
+                          onClick={() => {
+                            const newIpv4 = formData.prefixoIPv4.filter((_, i) => i !== index);
+                            setFormData({...formData, prefixoIPv4: newIpv4});
+                          }}
+                          className="p-2.5 text-zinc-500 hover:text-red-500 bg-zinc-950 border border-zinc-800 rounded-xl transition-colors"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
-              <div className="space-y-2">
-                <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Prefixo IPv6</label>
-                <input 
-                  value={formData.prefixoIPv6}
-                  onChange={e => setFormData({...formData, prefixoIPv6: e.target.value})}
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50"
-                />
+
+              {/* IPv6 Section */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Prefixo IPv6</label>
+                  <button 
+                    type="button"
+                    onClick={() => setFormData({...formData, prefixoIPv6: [...formData.prefixoIPv6, '']})}
+                    className="text-[10px] font-bold text-emerald-500 hover:text-emerald-400 uppercase tracking-widest flex items-center gap-1"
+                  >
+                    <Plus size={10} /> Adicionar
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {formData.prefixoIPv6.map((value, index) => (
+                    <div key={index} className="flex gap-2">
+                      <input 
+                        value={value}
+                        onChange={e => {
+                          const newIpv6 = [...formData.prefixoIPv6];
+                          newIpv6[index] = e.target.value;
+                          setFormData({...formData, prefixoIPv6: newIpv6});
+                        }}
+                        className="flex-1 bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50"
+                        placeholder="Ex: 2804:1234::/32"
+                      />
+                      {formData.prefixoIPv6.length > 1 && (
+                        <button 
+                          type="button"
+                          onClick={() => {
+                            const newIpv6 = formData.prefixoIPv6.filter((_, i) => i !== index);
+                            setFormData({...formData, prefixoIPv6: newIpv6});
+                          }}
+                          className="p-2.5 text-zinc-500 hover:text-red-500 bg-zinc-950 border border-zinc-800 rounded-xl transition-colors"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
