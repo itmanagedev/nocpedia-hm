@@ -160,6 +160,17 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["clienteId", "categoriaAcesso", "nome", "tipo", "fabricante", "uid", "createdAt"]
+    },
+    "Backup": {
+      "title": "Backup",
+      "description": "A system backup entry.",
+      "type": "object",
+      "properties": {
+        "date": { "type": "string", "format": "date-time" },
+        "data": { "type": "string", "description": "Stringified JSON of the backup data." },
+        "createdBy": { "type": "string" }
+      },
+      "required": ["date", "data", "createdBy"]
     }
   },
   "firestore": {
@@ -174,6 +185,10 @@
     "/clientes/{clienteId}/ativos/{ativoId}": {
       "schema": "Ativo",
       "description": "Collection of assets per client."
+    },
+    "/backups/{backupId}": {
+      "schema": "Backup",
+      "description": "Collection of system backups."
     }
   }
 }

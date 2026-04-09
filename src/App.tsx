@@ -54,7 +54,10 @@ import {
   Moon,
   FileText,
   Paperclip,
-  Download
+  Download,
+  History,
+  Clock,
+  RotateCcw
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -87,7 +90,7 @@ import {
 } from 'firebase/auth';
 import { db, auth } from './firebase';
 import firebaseConfig from '../firebase-applet-config.json';
-import { Command, Fabricante, Cliente, Ativo, DBUser } from './types';
+import { Command, Fabricante, Cliente, Ativo, DBUser, Backup } from './types';
 import { getInitialCommands } from './data/initialCommands';
 import Markdown from 'react-markdown';
 import { RichTextEditor } from './components/RichTextEditor';
@@ -498,6 +501,8 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const [backupsList, setBackupsList] = useState<Backup[]>([]);
+  const [isRestoring, setIsRestoring] = useState(false);
 
   const addToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
     const id = Math.random().toString(36).substring(2, 9);
@@ -817,6 +822,150 @@ export default function App() {
     return unsubscribe;
   }, [isAdmin]);
 
+  // Fetch backups (admin only)
+  useEffect(() => {
+    if (!isAdmin) return;
+    const q = query(collection(db, 'backups'), orderBy('date', 'desc'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const bks = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Backup[];
+      setBackupsList(bks);
+    }, (error) => {
+      console.error("Firestore Error (backups):", error);
+    });
+
+    return unsubscribe;
+  }, [isAdmin]);
+
+  // Auto-backup logic
+  useEffect(() => {
+    if (!isAdmin || !user) return;
+    
+    const checkAndBackup = async () => {
+      const today = new Date().toISOString().split('T')[0];
+      const backupRef = doc(db, 'backups', today);
+      const snap = await getDoc(backupRef);
+      
+      if (!snap.exists()) {
+        console.log("Iniciando backup diário automático...");
+        await performAutoBackup(today);
+      }
+    };
+    
+    checkAndBackup();
+  }, [isAdmin, user]);
+
+  const generateBackupData = async () => {
+    const backupData: any = {
+      exportDate: new Date().toISOString(),
+      clientes: [],
+      commands: [],
+      users: []
+    };
+
+    // Export Clientes and their Ativos
+    const clientesSnap = await getDocs(collection(db, 'clientes'));
+    for (const clienteDoc of clientesSnap.docs) {
+      const clienteData = { id: clienteDoc.id, ...clienteDoc.data() } as any;
+      const ativosSnap = await getDocs(collection(db, 'clientes', clienteDoc.id, 'ativos'));
+      clienteData.ativos = ativosSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      backupData.clientes.push(clienteData);
+    }
+
+    // Export Commands
+    const commandsSnap = await getDocs(collection(db, 'commands'));
+    backupData.commands = commandsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+    // Export Users
+    const usersSnap = await getDocs(collection(db, 'users'));
+    backupData.users = usersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+    return backupData;
+  };
+
+  const performAutoBackup = async (id: string) => {
+    try {
+      const data = await generateBackupData();
+      await setDoc(doc(db, 'backups', id), {
+        date: serverTimestamp(),
+        data: JSON.stringify(data),
+        createdBy: 'system'
+      });
+
+      // Prune old backups (keep only last 7)
+      const q = query(collection(db, 'backups'), orderBy('date', 'desc'));
+      const snap = await getDocs(q);
+      if (snap.size > 7) {
+        const toDelete = snap.docs.slice(7);
+        for (const d of toDelete) {
+          await deleteDoc(d.ref);
+        }
+      }
+    } catch (error) {
+      console.error("Erro no auto-backup:", error);
+    }
+  };
+
+  const restoreFromBackup = async (backup: Backup) => {
+    if (!window.confirm("ATENÇÃO: Restaurar um backup irá SUBSTITUIR todos os dados atuais (Clientes, Ativos, Comandos e Usuários). Esta ação não pode ser desfeita. Deseja continuar?")) {
+      return;
+    }
+
+    setIsRestoring(true);
+    try {
+      const data = JSON.parse(backup.data);
+      
+      // 1. Clear current data
+      const collectionsToClear = ['commands', 'users', 'clientes'];
+      for (const coll of collectionsToClear) {
+        const snap = await getDocs(collection(db, coll));
+        for (const d of snap.docs) {
+          // If it's a client, clear subcollection 'ativos' first
+          if (coll === 'clientes') {
+            const ativosSnap = await getDocs(collection(db, 'clientes', d.id, 'ativos'));
+            for (const a of ativosSnap.docs) await deleteDoc(a.ref);
+          }
+          await deleteDoc(d.ref);
+        }
+      }
+
+      // 2. Restore data
+      // Restore Commands
+      for (const cmd of data.commands) {
+        const { id, ...rest } = cmd;
+        await setDoc(doc(db, 'commands', id), rest);
+      }
+
+      // Restore Users
+      for (const u of data.users) {
+        const { id, ...rest } = u;
+        await setDoc(doc(db, 'users', id), rest);
+      }
+
+      // Restore Clientes and Ativos
+      for (const c of data.clientes) {
+        const { id, ativos, ...rest } = c;
+        await setDoc(doc(db, 'clientes', id), rest);
+        if (ativos && Array.isArray(ativos)) {
+          for (const a of ativos) {
+            const { id: aId, ...aRest } = a;
+            await setDoc(doc(db, 'clientes', id, 'ativos', aId), aRest);
+          }
+        }
+      }
+
+      alert('Restauração concluída com sucesso! A página será recarregada.');
+      window.location.reload();
+    } catch (error) {
+      console.error("Erro na restauração:", error);
+      alert('Erro ao restaurar backup. Verifique o console para mais detalhes.');
+    } finally {
+      setIsRestoring(false);
+    }
+  };
+
   const seedInitialData = async (uid: string, silent = false, existingCommands?: Command[]) => {
     if (isSeedingRef.current) return;
     isSeedingRef.current = true;
@@ -942,6 +1091,28 @@ export default function App() {
   };
 
   const handleLogout = () => signOut(auth);
+
+  const exportDatabase = async () => {
+    try {
+      const backupData = await generateBackupData();
+
+      // Create and download file
+      const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `nocpedia_backup_${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      alert('Backup exportado com sucesso!');
+    } catch (error) {
+      console.error("Erro ao exportar backup:", error);
+      alert('Erro ao exportar backup. Verifique o console para mais detalhes.');
+    }
+  };
 
   const ConfiguracoesView = () => (
     <div className="flex-1 flex flex-col p-8 bg-zinc-950 overflow-y-auto">
@@ -1109,8 +1280,100 @@ export default function App() {
         )}
 
         {configTab === 'geral' && (
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden p-6">
-            <p className="text-zinc-400">Configurações gerais do sistema em breve.</p>
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden p-8 space-y-12">
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                  <RefreshCw size={20} className="text-emerald-500" />
+                  Backup e Manutenção
+                </h3>
+                <span className="px-3 py-1 bg-emerald-500/10 text-emerald-500 text-[10px] font-bold uppercase rounded-full border border-emerald-500/20">
+                  Auto-Backup Ativo (7 Dias)
+                </span>
+              </div>
+              
+              <p className="text-zinc-400 text-sm max-w-2xl">
+                O sistema realiza um backup automático diário. Mantemos sempre os últimos 7 backups disponíveis para restauração imediata.
+              </p>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Export/Manual */}
+                <div className="bg-zinc-950 p-6 rounded-2xl border border-zinc-800 space-y-4">
+                  <h4 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                    <Download size={16} className="text-emerald-500" />
+                    Exportação Manual
+                  </h4>
+                  <p className="text-xs text-zinc-500">Baixe uma cópia instantânea em formato JSON para seu computador.</p>
+                  <button
+                    onClick={exportDatabase}
+                    className="w-full flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-white px-4 py-2.5 rounded-xl text-sm font-bold transition-all border border-zinc-700"
+                  >
+                    <Download size={18} />
+                    Exportar Agora
+                  </button>
+                </div>
+
+                {/* Restore History */}
+                <div className="bg-zinc-950 p-6 rounded-2xl border border-zinc-800 space-y-4">
+                  <h4 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                    <History size={16} className="text-emerald-500" />
+                    Histórico de Backups
+                  </h4>
+                  <div className="space-y-2 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
+                    {backupsList.length === 0 ? (
+                      <p className="text-xs text-zinc-600 italic">Nenhum backup automático gerado ainda.</p>
+                    ) : (
+                      backupsList.map((bk) => (
+                        <div key={bk.id} className="flex items-center justify-between p-3 bg-zinc-900 border border-zinc-800 rounded-xl group">
+                          <div className="flex items-center gap-3">
+                            <Clock size={14} className="text-zinc-500" />
+                            <div className="flex flex-col">
+                              <span className="text-xs font-bold text-zinc-300">{bk.id}</span>
+                              <span className="text-[10px] text-zinc-600">
+                                {bk.date?.toDate ? bk.date.toDate().toLocaleTimeString() : 'Automático'}
+                              </span>
+                            </div>
+                          </div>
+                          <button
+                            disabled={isRestoring}
+                            onClick={() => restoreFromBackup(bk)}
+                            className="p-2 text-zinc-500 hover:text-emerald-500 hover:bg-emerald-500/10 rounded-lg transition-all disabled:opacity-50"
+                            title="Restaurar este backup"
+                          >
+                            {isRestoring ? <RefreshCw size={14} className="animate-spin" /> : <RotateCcw size={14} />}
+                          </button>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-8 border-t border-zinc-800 space-y-4">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <Info size={20} className="text-emerald-500" />
+                Informações do Sistema
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="bg-zinc-950 p-4 rounded-xl border border-zinc-800">
+                  <span className="text-zinc-500 text-xs font-bold uppercase block mb-1">Versão</span>
+                  <span className="text-zinc-300 text-sm">1.3.0-stable</span>
+                </div>
+                <div className="bg-zinc-950 p-4 rounded-xl border border-zinc-800">
+                  <span className="text-zinc-500 text-xs font-bold uppercase block mb-1">Ambiente</span>
+                  <span className="text-zinc-300 text-sm">Produção</span>
+                </div>
+                <div className="bg-zinc-950 p-4 rounded-xl border border-zinc-800">
+                  <span className="text-zinc-500 text-xs font-bold uppercase block mb-1">Database</span>
+                  <span className="text-zinc-300 text-sm">Firestore Enterprise</span>
+                </div>
+                <div className="bg-zinc-950 p-4 rounded-xl border border-zinc-800">
+                  <span className="text-zinc-500 text-xs font-bold uppercase block mb-1">Último Backup</span>
+                  <span className="text-zinc-300 text-sm">{backupsList[0]?.id || 'Pendente'}</span>
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </div>

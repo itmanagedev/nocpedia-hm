@@ -129,3 +129,10 @@ export type Fabricante =
   "VMware" | "Proxmox" | "Trello" | "Web" | "Google" | "Microsoft" |
   "Linux" | "Windows Server" | 
   "Docker" | "Kubernetes" | "Desenvolvimento";
+
+export interface Backup {
+  id?: string;
+  date: any; // Firestore Timestamp
+  data: string; // Stringified JSON
+  createdBy: string;
+}

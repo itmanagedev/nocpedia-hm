@@ -76,6 +76,11 @@ service cloud.firestore {
              data.uid is string && data.uid.size() > 0 && data.uid.size() <= 128;
     }
 
+    function isValidBackup(data) {
+      return data.data is string && data.data.size() > 0 &&
+             data.createdBy is string && data.createdBy.size() > 0;
+    }
+
     match /commands/{commandId} {
       // Allow public read access
       allow read: if true;
@@ -106,6 +111,12 @@ service cloud.firestore {
       allow create: if isAuthenticated() && (request.auth.uid == userId || isAdmin()) && isValidUser(request.resource.data);
       // Permite que admins atualizem qualquer usuário, ou que o próprio usuário atualize seus dados (exceto role)
       allow update: if isAuthenticated() && (isAdmin() || (request.auth.uid == userId && request.resource.data.role == resource.data.role)) && isValidUser(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /backups/{backupId} {
+      allow read: if isAdmin();
+      allow write: if isAdmin() && isValidBackup(request.resource.data);
       allow delete: if isAdmin();
     }
   }
