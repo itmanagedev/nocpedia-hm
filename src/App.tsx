@@ -603,44 +603,78 @@ interface Toast {
 
 // Subcomponentes movidos para fora do App para evitar perda de foco nos inputs durante re-renders
 const TextField = ({ label, value }: { label: string, value?: string }) => {
+  const [copied, setCopied] = useState(false);
   if (!value) return null;
   const isUrl = value.startsWith('http://') || value.startsWith('https://');
   
+  const handleCopy = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(value);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   // Abreviação para URLs ou hostnames muito longos
   const displayValue = value.length > 35 ? value.substring(0, 32) + '...' : value;
   
   return (
-    <div className="flex items-center justify-between bg-zinc-950 px-3 py-2 rounded-lg border border-zinc-800/50 w-full overflow-hidden">
+    <div className="flex items-center justify-between bg-zinc-950 px-3 py-2 rounded-lg border border-zinc-800/50 w-full overflow-hidden group/field">
       <span className="text-zinc-500 text-[10px] sm:text-xs font-bold uppercase shrink-0 mr-2">{label}</span>
-      {isUrl ? (
-        <a 
-          href={value} 
-          target="_blank" 
-          rel="noopener noreferrer" 
-          className="text-emerald-400 hover:text-emerald-300 font-mono text-xs truncate hover:underline"
-          title={value}
+      <div className="flex items-center gap-2 overflow-hidden">
+        {isUrl ? (
+          <a 
+            href={value} 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            className="text-emerald-400 hover:text-emerald-300 font-mono text-xs truncate hover:underline"
+            title={value}
+          >
+            {displayValue}
+          </a>
+        ) : (
+          <span className="text-emerald-400 font-mono text-xs truncate" title={value}>{displayValue}</span>
+        )}
+        <button 
+          onClick={handleCopy}
+          className={`p-1 rounded hover:bg-zinc-800 transition-colors shrink-0 opacity-0 group-hover/field:opacity-100 ${copied ? 'text-emerald-500' : 'text-zinc-600'}`}
+          title="Copiar"
         >
-          {displayValue}
-        </a>
-      ) : (
-        <span className="text-zinc-300 font-mono text-xs truncate" title={value}>{displayValue}</span>
-      )}
+          {copied ? <CheckCircle2 size={12} /> : <Copy size={12} />}
+        </button>
+      </div>
     </div>
   );
 };
 
 const PasswordField = ({ label, value, fieldKey }: { label: string, value: string, fieldKey: string }) => {
   const [isVisible, setIsVisible] = useState(false);
+  const [copied, setCopied] = useState(false);
   if (!value) return null;
 
+  const handleCopy = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(value);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   return (
-    <div className="flex items-center justify-between bg-zinc-950 px-3 py-2 rounded-lg border border-zinc-800/50 w-full">
+    <div className="flex items-center justify-between bg-zinc-950 px-3 py-2 rounded-lg border border-zinc-800/50 w-full group/field">
       <span className="text-zinc-500 text-[10px] sm:text-xs font-bold uppercase shrink-0 mr-2">{label}</span>
       <div className="flex items-center gap-2 overflow-hidden">
-        <span className="text-zinc-300 font-mono text-xs">{isVisible ? value : '••••••••'}</span>
-        <button onClick={() => setIsVisible(!isVisible)} className="text-zinc-500 hover:text-zinc-300 shrink-0">
-          {isVisible ? <EyeOff size={14} /> : <Eye size={14} />}
-        </button>
+        <span className="text-emerald-400 font-mono text-xs">{isVisible ? value : '••••••••'}</span>
+        <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover/field:opacity-100 transition-opacity">
+          <button 
+            onClick={handleCopy}
+            className={`p-1 rounded hover:bg-zinc-800 transition-colors ${copied ? 'text-emerald-500' : 'text-zinc-600'}`}
+            title="Copiar"
+          >
+            {copied ? <CheckCircle2 size={12} /> : <Copy size={12} />}
+          </button>
+          <button onClick={() => setIsVisible(!isVisible)} className="p-1 rounded hover:bg-zinc-800 text-zinc-500 hover:text-zinc-300">
+            {isVisible ? <EyeOff size={14} /> : <Eye size={14} />}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -651,6 +685,7 @@ const AtivoCard = ({ ativo, dbUser, onEdit, onDelete, onShowHelp }: { ativo: Ati
   const [visiblePasswords, setVisiblePasswords] = useState<Set<string>>(new Set());
   const [copiedSsh, setCopiedSsh] = useState(false);
   const [copiedPass, setCopiedPass] = useState(false);
+  const [copiedUser, setCopiedUser] = useState(false);
 
   const handleCopySsh = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -692,6 +727,16 @@ const AtivoCard = ({ ativo, dbUser, onEdit, onDelete, onShowHelp }: { ativo: Ati
     navigator.clipboard.writeText(pass);
     setCopiedPass(true);
     setTimeout(() => setCopiedPass(false), 2000);
+  };
+
+  const handleCopyUser = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const user = ativo.sshUser || ativo.otherUser || ativo.pppoeUser;
+    if (!user) return;
+    
+    navigator.clipboard.writeText(user);
+    setCopiedUser(true);
+    setTimeout(() => setCopiedUser(false), 2000);
   };
 
   const togglePassword = (field: string) => {
@@ -763,20 +808,40 @@ const AtivoCard = ({ ativo, dbUser, onEdit, onDelete, onShowHelp }: { ativo: Ati
           </div>
           {(ativo.ipv4Hostname || ativo.urlFqdnDomain) && (
             <div className="flex gap-1 justify-end sm:justify-start">
+              {ativo.categoriaAcesso !== 'Web Applications' && (
+                <button
+                  onClick={handleConnectSsh}
+                  className="p-2 bg-zinc-950 border border-zinc-800/50 rounded-lg text-emerald-500 hover:bg-emerald-500/10 transition-all"
+                  title="Conectar via SSH (Copia comando e tenta abrir terminal)"
+                >
+                  <Terminal size={14} />
+                </button>
+              )}
               <button
-                onClick={handleConnectSsh}
-                className="p-2 bg-zinc-950 border border-zinc-800/50 rounded-lg text-emerald-500 hover:bg-emerald-500/10 transition-all"
-                title="Conectar via SSH (Copia comando e tenta abrir terminal)"
-              >
-                <Terminal size={14} />
-              </button>
-              <button
-                onClick={handleCopySsh}
+                onClick={ativo.categoriaAcesso === 'Web Applications' ? (e) => {
+                  e.stopPropagation();
+                  if (ativo.urlFqdnDomain) {
+                    navigator.clipboard.writeText(ativo.urlFqdnDomain);
+                    setCopiedSsh(true);
+                    setTimeout(() => setCopiedSsh(false), 2000);
+                  }
+                } : handleCopySsh}
                 className={`p-2 bg-zinc-950 border border-zinc-800/50 rounded-lg transition-all ${copiedSsh ? 'text-emerald-500 bg-emerald-500/10' : 'text-zinc-500 hover:text-white hover:bg-zinc-800'}`}
-                title="Copiar Comando SSH"
+                title={ativo.categoriaAcesso === 'Web Applications' ? "Copiar URL" : "Copiar Comando SSH"}
               >
                 {copiedSsh ? <CheckCircle2 size={14} /> : <Copy size={14} />}
               </button>
+
+              {(ativo.sshUser || ativo.otherUser || ativo.pppoeUser) && (
+                <button
+                  onClick={handleCopyUser}
+                  className={`p-2 bg-zinc-950 border border-zinc-800/50 rounded-lg transition-all ${copiedUser ? 'text-emerald-500 bg-emerald-500/10' : 'text-zinc-500 hover:text-white hover:bg-zinc-800'}`}
+                  title="Copiar Usuário de Acesso"
+                >
+                  {copiedUser ? <CheckCircle2 size={14} /> : <UserIcon size={14} />}
+                </button>
+              )}
+
               {(ativo.sshPassword || ativo.otherPassword || ativo.pppoePassword || ativo.consolePassword) && (
                 <button
                   onClick={handleCopyPass}
@@ -786,13 +851,16 @@ const AtivoCard = ({ ativo, dbUser, onEdit, onDelete, onShowHelp }: { ativo: Ati
                   {copiedPass ? <CheckCircle2 size={14} /> : <Key size={14} />}
                 </button>
               )}
-              <button
-                onClick={(e) => { e.stopPropagation(); onShowHelp(); }}
-                className="p-2 bg-zinc-950 border border-zinc-800/50 rounded-lg text-zinc-500 hover:text-white hover:bg-zinc-800 transition-all"
-                title="Ajuda para configurar SSH no Windows"
-              >
-                <HelpCircle size={14} />
-              </button>
+              
+              {ativo.categoriaAcesso !== 'Web Applications' && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); onShowHelp(); }}
+                  className="p-2 bg-zinc-950 border border-zinc-800/50 rounded-lg text-zinc-500 hover:text-white hover:bg-zinc-800 transition-all"
+                  title="Ajuda para configurar SSH no Windows"
+                >
+                  <HelpCircle size={14} />
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -836,7 +904,7 @@ const AtivoCard = ({ ativo, dbUser, onEdit, onDelete, onShowHelp }: { ativo: Ati
                 {ativo.networkTopologyFileName && (
                   <div className="flex items-center justify-between bg-zinc-950 px-3 py-2 rounded-lg border border-zinc-800/50">
                     <span className="text-zinc-500 text-xs font-bold uppercase">Arquivo</span>
-                    <span className="text-zinc-300 font-mono text-xs">{ativo.networkTopologyFileName}</span>
+                    <span className="text-emerald-400 font-mono text-xs">{ativo.networkTopologyFileName}</span>
                   </div>
                 )}
               </>
@@ -881,7 +949,7 @@ const AtivoCard = ({ ativo, dbUser, onEdit, onDelete, onShowHelp }: { ativo: Ati
               <div className="bg-zinc-950 p-3 rounded-lg border border-zinc-800/50 mt-2">
                 <span className="text-zinc-500 text-xs font-bold uppercase block mb-1">Observações</span>
                 <div 
-                  className="text-zinc-300 text-xs prose prose-invert prose-sm max-w-none"
+                  className="text-emerald-400/90 text-xs prose prose-invert prose-sm max-w-none"
                   dangerouslySetInnerHTML={{ __html: ativo.observacoes }}
                 />
               </div>
