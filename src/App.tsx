@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useDeferredValue } from 'react';
 import { initializeApp, deleteApp } from 'firebase/app';
 import { 
   Search, 
@@ -601,6 +601,309 @@ interface Toast {
   type: 'success' | 'error' | 'info';
 }
 
+// Subcomponentes movidos para fora do App para evitar perda de foco nos inputs durante re-renders
+const TextField = ({ label, value }: { label: string, value?: string }) => {
+  if (!value) return null;
+  const isUrl = value.startsWith('http://') || value.startsWith('https://');
+  
+  // Abreviação para URLs ou hostnames muito longos
+  const displayValue = value.length > 35 ? value.substring(0, 32) + '...' : value;
+  
+  return (
+    <div className="flex items-center justify-between bg-zinc-950 px-3 py-2 rounded-lg border border-zinc-800/50 w-full overflow-hidden">
+      <span className="text-zinc-500 text-[10px] sm:text-xs font-bold uppercase shrink-0 mr-2">{label}</span>
+      {isUrl ? (
+        <a 
+          href={value} 
+          target="_blank" 
+          rel="noopener noreferrer" 
+          className="text-emerald-400 hover:text-emerald-300 font-mono text-xs truncate hover:underline"
+          title={value}
+        >
+          {displayValue}
+        </a>
+      ) : (
+        <span className="text-zinc-300 font-mono text-xs truncate" title={value}>{displayValue}</span>
+      )}
+    </div>
+  );
+};
+
+const PasswordField = ({ label, value, fieldKey }: { label: string, value: string, fieldKey: string }) => {
+  const [isVisible, setIsVisible] = useState(false);
+  if (!value) return null;
+
+  return (
+    <div className="flex items-center justify-between bg-zinc-950 px-3 py-2 rounded-lg border border-zinc-800/50 w-full">
+      <span className="text-zinc-500 text-[10px] sm:text-xs font-bold uppercase shrink-0 mr-2">{label}</span>
+      <div className="flex items-center gap-2 overflow-hidden">
+        <span className="text-zinc-300 font-mono text-xs">{isVisible ? value : '••••••••'}</span>
+        <button onClick={() => setIsVisible(!isVisible)} className="text-zinc-500 hover:text-zinc-300 shrink-0">
+          {isVisible ? <EyeOff size={14} /> : <Eye size={14} />}
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const AtivoCard = ({ ativo, dbUser, onEdit, onDelete, onShowHelp }: { ativo: Ativo, dbUser: DBUser | null, onEdit: () => void, onDelete: () => void, onShowHelp: () => void }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [visiblePasswords, setVisiblePasswords] = useState<Set<string>>(new Set());
+  const [copiedSsh, setCopiedSsh] = useState(false);
+  const [copiedPass, setCopiedPass] = useState(false);
+
+  const handleCopySsh = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const address = ativo.ipv4Hostname || ativo.urlFqdnDomain;
+    if (!address) return;
+    
+    const user = ativo.sshUser ? `${ativo.sshUser}@` : '';
+    const port = ativo.sshPort ? ` -p ${ativo.sshPort}` : '';
+    const command = `ssh ${user}${address}${port}`;
+    
+    navigator.clipboard.writeText(command);
+    setCopiedSsh(true);
+    setTimeout(() => setCopiedSsh(false), 2000);
+  };
+
+  const handleConnectSsh = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const address = ativo.ipv4Hostname || ativo.urlFqdnDomain;
+    if (!address) return;
+    
+    const user = ativo.sshUser ? `${ativo.sshUser}@` : '';
+    const port = ativo.sshPort ? `:${ativo.sshPort}` : '';
+    
+    // Copiar comando como fallback imediato
+    const sshCommand = `ssh ${ativo.sshUser ? `${ativo.sshUser}@` : ''}${address}${ativo.sshPort ? ` -p ${ativo.sshPort}` : ''}`;
+    navigator.clipboard.writeText(sshCommand);
+    setCopiedSsh(true);
+    setTimeout(() => setCopiedSsh(false), 2000);
+
+    // Tentar abrir o protocolo
+    window.location.href = `ssh://${user}${address}${port}`;
+  };
+
+  const handleCopyPass = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const pass = ativo.sshPassword || ativo.otherPassword || ativo.pppoePassword || ativo.consolePassword;
+    if (!pass) return;
+    
+    navigator.clipboard.writeText(pass);
+    setCopiedPass(true);
+    setTimeout(() => setCopiedPass(false), 2000);
+  };
+
+  const togglePassword = (field: string) => {
+    setVisiblePasswords(prev => {
+      const next = new Set(prev);
+      if (next.has(field)) next.delete(field);
+      else next.add(field);
+      return next;
+    });
+  };
+
+  const downloadBackup = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!ativo.backupFileContent || !ativo.backupFileName) return;
+    
+    const link = document.createElement('a');
+    link.href = ativo.backupFileContent;
+    link.download = ativo.backupFileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  return (
+    <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 sm:p-6 hover:border-emerald-500/30 transition-all group relative flex flex-col h-full">
+      <div className="flex-1">
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className={`p-2 sm:p-3 rounded-xl shrink-0 ${
+              ativo.categoriaAcesso === 'Servers' ? 'bg-blue-500/10 text-blue-500' :
+              ativo.categoriaAcesso === 'Web Applications' ? 'bg-purple-500/10 text-purple-500' :
+              ativo.categoriaAcesso === 'Network Assets' ? 'bg-emerald-500/10 text-emerald-500' :
+              ativo.categoriaAcesso === 'Network Topologia' ? 'bg-orange-500/10 text-orange-500' :
+              'bg-zinc-500/10 text-zinc-500'
+            }`}>
+              {ativo.categoriaAcesso === 'Servers' ? <Server size={20} /> :
+               ativo.categoriaAcesso === 'Web Applications' ? <Globe size={20} /> :
+               ativo.categoriaAcesso === 'Network Assets' ? <Network size={20} /> :
+               ativo.categoriaAcesso === 'Network Topologia' ? <Layers size={20} /> :
+               <Box size={20} />}
+            </div>
+            <div className="min-w-0">
+              <h4 className="text-sm sm:text-base font-bold text-white truncate group-hover:text-emerald-400 transition-colors">{ativo.nome}</h4>
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className="text-[10px] sm:text-xs text-zinc-500 uppercase font-bold tracking-wider">{ativo.tipo}</span>
+                <span className="text-zinc-700">•</span>
+                <span className="text-[10px] sm:text-xs text-zinc-400 truncate">
+                  {ativo.fabricante} {ativo.modelo} {ativo.popLocation && `| ${ativo.popLocation}`}
+                </span>
+              </div>
+            </div>
+          </div>
+          {dbUser?.role !== 'viewer' && (
+            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+              <button onClick={onEdit} className="p-2 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-lg transition-all">
+                <EditIcon size={16} />
+              </button>
+              <button onClick={onDelete} className="p-2 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all">
+                <TrashIcon size={16} />
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+          <div className="flex-1 min-w-0 space-y-1">
+            <TextField label="IPv4 / Host" value={ativo.ipv4Hostname || ativo.urlFqdnDomain} />
+            <TextField label="Endereço IPv6" value={ativo.ipv6Hostname} />
+          </div>
+          {(ativo.ipv4Hostname || ativo.urlFqdnDomain) && (
+            <div className="flex gap-1 justify-end sm:justify-start">
+              <button
+                onClick={handleConnectSsh}
+                className="p-2 bg-zinc-950 border border-zinc-800/50 rounded-lg text-emerald-500 hover:bg-emerald-500/10 transition-all"
+                title="Conectar via SSH (Copia comando e tenta abrir terminal)"
+              >
+                <Terminal size={14} />
+              </button>
+              <button
+                onClick={handleCopySsh}
+                className={`p-2 bg-zinc-950 border border-zinc-800/50 rounded-lg transition-all ${copiedSsh ? 'text-emerald-500 bg-emerald-500/10' : 'text-zinc-500 hover:text-white hover:bg-zinc-800'}`}
+                title="Copiar Comando SSH"
+              >
+                {copiedSsh ? <CheckCircle2 size={14} /> : <Copy size={14} />}
+              </button>
+              {(ativo.sshPassword || ativo.otherPassword || ativo.pppoePassword || ativo.consolePassword) && (
+                <button
+                  onClick={handleCopyPass}
+                  className={`p-2 bg-zinc-950 border border-zinc-800/50 rounded-lg transition-all ${copiedPass ? 'text-emerald-500 bg-emerald-500/10' : 'text-zinc-500 hover:text-white hover:bg-zinc-800'}`}
+                  title="Copiar Senha de Acesso"
+                >
+                  {copiedPass ? <CheckCircle2 size={14} /> : <Key size={14} />}
+                </button>
+              )}
+              <button
+                onClick={(e) => { e.stopPropagation(); onShowHelp(); }}
+                className="p-2 bg-zinc-950 border border-zinc-800/50 rounded-lg text-zinc-500 hover:text-white hover:bg-zinc-800 transition-all"
+                title="Ajuda para configurar SSH no Windows"
+              >
+                <HelpCircle size={14} />
+              </button>
+            </div>
+          )}
+        </div>
+        
+        {isExpanded && (
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="space-y-2 pt-2 border-t border-zinc-800 mt-2">
+            <TextField label="Site / POP" value={ativo.popLocation} />
+            <TextField label="SSH User" value={ativo.sshUser} />
+            <TextField label="Web User" value={ativo.otherUser} />
+            <PasswordField label="SSH Pass" value={ativo.sshPassword || ''} fieldKey="sshPassword" />
+            <PasswordField label="Web Pass" value={ativo.otherPassword || ''} fieldKey="otherPassword" />
+            <TextField label="Porta SSH" value={ativo.sshPort} />
+            <TextField label="Porta Web" value={ativo.otherPort} />
+            <TextField label="SNMP Community" value={ativo.snmpCommunity} />
+            <PasswordField label="Console Pass" value={ativo.consolePassword || ''} fieldKey="consolePassword" />
+            
+            {ativo.backupFileName && (
+              <div className="flex items-center justify-between bg-zinc-950 px-3 py-2 rounded-lg border border-zinc-800/50">
+                <div className="flex items-center gap-2">
+                  <Save size={14} className="text-emerald-500" />
+                  <span className="text-zinc-500 text-xs font-bold uppercase">Backup</span>
+                </div>
+                <button 
+                  onClick={downloadBackup}
+                  className="flex items-center gap-2 text-emerald-400 hover:text-emerald-300 transition-colors"
+                >
+                  <span className="text-[10px] font-mono truncate max-w-[150px]">{ativo.backupFileName}</span>
+                  <Download size={14} />
+                </button>
+              </div>
+            )}
+
+            {ativo.categoriaAcesso === 'Network Topologia' && (
+              <>
+                {ativo.networkTopologyLink && (
+                  <div className="flex items-center justify-between bg-zinc-950 px-3 py-2 rounded-lg border border-zinc-800/50">
+                    <span className="text-zinc-500 text-xs font-bold uppercase">Link Topologia</span>
+                    <a href={ativo.networkTopologyLink} target="_blank" rel="noopener noreferrer" className="text-emerald-400 hover:text-emerald-300 text-xs underline">Acessar</a>
+                  </div>
+                )}
+                {ativo.networkTopologyFileName && (
+                  <div className="flex items-center justify-between bg-zinc-950 px-3 py-2 rounded-lg border border-zinc-800/50">
+                    <span className="text-zinc-500 text-xs font-bold uppercase">Arquivo</span>
+                    <span className="text-zinc-300 font-mono text-xs">{ativo.networkTopologyFileName}</span>
+                  </div>
+                )}
+              </>
+            )}
+
+            {ativo.categoriaAcesso === 'Upstream e Downstream' && (
+              <>
+                <TextField label="Tipo Link" value={ativo.linkType} />
+                <TextField label="ID Circuito" value={ativo.idCircuito} />
+                <TextField label="Velocidade" value={ativo.velocidadeContratada} />
+                <TextField label="Enlace IPv4" value={ativo.enlaceIpv4} />
+                <TextField label="VLAN IPv4" value={ativo.idVlanIpv4} />
+                <TextField label="Enlace IPv6" value={ativo.enlaceIpv6} />
+                <TextField label="VLAN IPv6" value={ativo.idVlanIpv6} />
+                <TextField label="Multihop" value={ativo.multihop} />
+                <TextField label="Multihop IPv6" value={ativo.multihopIpv6} />
+                <TextField label="Community Blackhole" value={ativo.communityBlackhole} />
+                <TextField label="Endereço Abordagem" value={ativo.enderecoAbordagem} />
+                <TextField label="Contato NOC" value={ativo.contatoNoc} />
+                <TextField label="E-mail NOC" value={ativo.emailNoc} />
+              </>
+            )}
+
+            {ativo.categoriaAcesso === 'Clientes B2B' && (
+              <>
+                <TextField label="ID Circuito" value={ativo.idCircuito} />
+                <TextField label="Endereço" value={ativo.enderecoCliente} />
+                <TextField label="Velocidade" value={ativo.velocidadeContratada} />
+                <TextField label="Enlace IPv4" value={ativo.enlaceIpv4} />
+                <TextField label="Enlace IPv6" value={ativo.enlaceIpv6} />
+                <TextField label="ID VLAN" value={ativo.idVlanIpv4} />
+                <TextField label="IPv4 Público" value={ativo.ipv4Publico} />
+                <TextField label="IPv6 Público" value={ativo.ipv6Publico} />
+                <TextField label="PPPoE User" value={ativo.pppoeUser} />
+                <PasswordField label="PPPoE Pass" value={ativo.pppoePassword || ''} fieldKey="pppoePassword" />
+                <TextField label="Last Mile" value={ativo.lastMile} />
+                <TextField label="Contato Last Mile" value={ativo.contatoLastMile} />
+              </>
+            )}
+
+            {ativo.observacoes && (
+              <div className="bg-zinc-950 p-3 rounded-lg border border-zinc-800/50 mt-2">
+                <span className="text-zinc-500 text-xs font-bold uppercase block mb-1">Observações</span>
+                <div 
+                  className="text-zinc-300 text-xs prose prose-invert prose-sm max-w-none"
+                  dangerouslySetInnerHTML={{ __html: ativo.observacoes }}
+                />
+              </div>
+            )}
+          </motion.div>
+        )}
+      </div>
+
+      <button 
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="w-full mt-4 py-2 flex items-center justify-center gap-2 text-xs font-medium text-zinc-500 hover:text-zinc-300 bg-zinc-950/50 hover:bg-zinc-800 rounded-lg transition-colors"
+      >
+        {isExpanded ? (
+          <><ChevronUp size={14} /> Menos Detalhes</>
+        ) : (
+          <><ChevronDown size={14} /> Mais Detalhes</>
+        )}
+      </button>
+    </div>
+  );
+};
+
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [dbUser, setDbUser] = useState<DBUser | null>(null);
@@ -642,6 +945,7 @@ export default function App() {
     return 'dark';
   });
   const [searchQuery, setSearchQuery] = useState('');
+  const deferredSearchQuery = useDeferredValue(searchQuery);
   const [selectedFabricante, setSelectedFabricante] = useState<Fabricante | 'All' | 'Group:Redes' | 'Group:Server'>('All');
   const [expandedGroups, setExpandedGroups] = useState<string[]>([]);
 
@@ -1502,320 +1806,33 @@ export default function App() {
   );
 
   const [searchAtivoQuery, setSearchAtivoQuery] = useState('');
+  const deferredSearchAtivoQuery = useDeferredValue(searchAtivoQuery);
+  const [searchClienteQuery, setSearchClienteQuery] = useState('');
+  const deferredSearchClienteQuery = useDeferredValue(searchClienteQuery);
 
-  const AtivoCard = ({ ativo, dbUser, onEdit, onDelete, onShowHelp }: { ativo: Ativo, dbUser: DBUser | null, onEdit: () => void, onDelete: () => void, onShowHelp: () => void }) => {
-    const [isExpanded, setIsExpanded] = useState(false);
-    const [visiblePasswords, setVisiblePasswords] = useState<Set<string>>(new Set());
-    const [copiedSsh, setCopiedSsh] = useState(false);
-    const [copiedPass, setCopiedPass] = useState(false);
-
-    const handleCopySsh = (e: React.MouseEvent) => {
-      e.stopPropagation();
-      const address = ativo.ipv4Hostname || ativo.urlFqdnDomain;
-      if (!address) return;
+  // Memoized filtered clients for better performance
+  const filteredClientes = useMemo(() => {
+    const query = deferredSearchClienteQuery.toLowerCase().trim();
+    if (!query) return clientes;
+    const terms = query.split(/\s+/).filter(t => t.length > 0);
+    
+    return clientes.filter(c => {
+      const searchableText = [
+        c.nomeFantasia,
+        c.razaoSocial,
+        c.cnpj,
+        c.website,
+        c.cidade,
+        c.estado,
+        ...(Array.isArray(c.asn) ? c.asn : [c.asn]),
+        ...(Array.isArray(c.prefixoIPv4) ? c.prefixoIPv4 : [c.prefixoIPv4]),
+        ...(Array.isArray(c.prefixoIPv6) ? c.prefixoIPv6 : [c.prefixoIPv6]),
+        ...(c.infraestrutura || []).map(i => `${i.asn} ${i.ipv4} ${i.ipv6}`)
+      ].join(' ').toLowerCase();
       
-      const user = ativo.sshUser ? `${ativo.sshUser}@` : '';
-      const port = ativo.sshPort ? ` -p ${ativo.sshPort}` : '';
-      const command = `ssh ${user}${address}${port}`;
-      
-      navigator.clipboard.writeText(command);
-      setCopiedSsh(true);
-      setTimeout(() => setCopiedSsh(false), 2000);
-    };
-
-    const handleConnectSsh = (e: React.MouseEvent) => {
-      e.stopPropagation();
-      const address = ativo.ipv4Hostname || ativo.urlFqdnDomain;
-      if (!address) return;
-      
-      const user = ativo.sshUser ? `${ativo.sshUser}@` : '';
-      const port = ativo.sshPort ? `:${ativo.sshPort}` : '';
-      
-      // Copiar comando como fallback imediato
-      const sshCommand = `ssh ${ativo.sshUser ? `${ativo.sshUser}@` : ''}${address}${ativo.sshPort ? ` -p ${ativo.sshPort}` : ''}`;
-      navigator.clipboard.writeText(sshCommand);
-      setCopiedSsh(true);
-      setTimeout(() => setCopiedSsh(false), 2000);
-
-      // Tentar abrir o protocolo
-      window.location.href = `ssh://${user}${address}${port}`;
-    };
-
-    const handleCopyPass = (e: React.MouseEvent) => {
-      e.stopPropagation();
-      const pass = ativo.sshPassword || ativo.otherPassword || ativo.pppoePassword || ativo.consolePassword;
-      if (!pass) return;
-      
-      navigator.clipboard.writeText(pass);
-      setCopiedPass(true);
-      setTimeout(() => setCopiedPass(false), 2000);
-    };
-
-    const togglePassword = (field: string) => {
-      setVisiblePasswords(prev => {
-        const next = new Set(prev);
-        if (next.has(field)) next.delete(field);
-        else next.add(field);
-        return next;
-      });
-    };
-
-    const downloadBackup = (e: React.MouseEvent) => {
-      e.stopPropagation();
-      if (!ativo.backupFileContent || !ativo.backupFileName) return;
-      
-      const link = document.createElement('a');
-      link.href = ativo.backupFileContent;
-      link.download = ativo.backupFileName;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    };
-
-    const PasswordField = ({ label, value, fieldKey }: { label: string, value: string, fieldKey: string }) => {
-      if (!value) return null;
-      const isVisible = visiblePasswords.has(fieldKey);
-      return (
-        <div className="flex items-center justify-between bg-zinc-950 px-3 py-2 rounded-lg border border-zinc-800/50">
-          <span className="text-zinc-500 text-xs font-bold uppercase">{label}</span>
-          <div className="flex items-center gap-2">
-            <span className="text-zinc-300 font-mono text-xs">{isVisible ? value : '••••••••'}</span>
-            <button onClick={() => togglePassword(fieldKey)} className="text-zinc-500 hover:text-zinc-300">
-              {isVisible ? <EyeOff size={14} /> : <Eye size={14} />}
-            </button>
-          </div>
-        </div>
-      );
-    };
-
-    const TextField = ({ label, value }: { label: string, value?: string }) => {
-      if (!value) return null;
-      const isUrl = value.startsWith('http://') || value.startsWith('https://');
-      
-      // Abreviação para URLs ou hostnames muito longos
-      const displayValue = value.length > 35 ? value.substring(0, 32) + '...' : value;
-      
-      return (
-        <div className="flex items-center justify-between bg-zinc-950 px-3 py-2 rounded-lg border border-zinc-800/50 w-full overflow-hidden">
-          <span className="text-zinc-500 text-[10px] sm:text-xs font-bold uppercase shrink-0 mr-2">{label}</span>
-          {isUrl ? (
-            <a 
-              href={value} 
-              target="_blank" 
-              rel="noopener noreferrer" 
-              className="text-emerald-400 hover:text-emerald-300 font-mono text-[10px] sm:text-xs flex items-center gap-1.5 transition-colors truncate"
-              title={value}
-            >
-              <span className="truncate">{displayValue}</span>
-              <ExternalLink size={12} className="shrink-0" />
-            </a>
-          ) : (
-            <span className="text-zinc-300 font-mono text-[10px] sm:text-xs truncate" title={value}>{displayValue}</span>
-          )}
-        </div>
-      );
-    };
-
-    return (
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3 sm:p-5 hover:border-emerald-500/30 transition-colors group">
-        <div className="flex items-start justify-between mb-3 sm:mb-4">
-          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-            <div className="p-1.5 sm:p-2 bg-zinc-800 rounded-lg text-zinc-400 shrink-0">
-              {ativo.categoriaAcesso === 'Servers' ? <Server size={20} /> :
-               ativo.categoriaAcesso === 'Web Applications' ? <Globe size={20} /> :
-               ativo.categoriaAcesso === 'Network Assets' ? <Network size={20} /> :
-               ativo.categoriaAcesso === 'Network Topologia' ? <Network size={20} /> :
-               ativo.categoriaAcesso === 'Upstream e Downstream' ? <Network size={20} /> :
-               ativo.categoriaAcesso === 'Clientes B2B' ? <Building2 size={20} /> :
-               <Box size={20} />}
-            </div>
-            <div>
-              <div className="flex items-center gap-1 sm:gap-2 min-w-0">
-                <h5 className="font-bold text-white text-sm sm:text-base truncate">{ativo.nome}</h5>
-                {ativo.status && (
-                  <span className={`px-1.5 sm:px-2 py-0.5 rounded-full text-[8px] sm:text-[10px] font-bold uppercase tracking-widest shrink-0 ${
-                    ativo.status === 'Ativo' ? 'bg-emerald-500/10 text-emerald-500' :
-                    ativo.status === 'Inativo' ? 'bg-red-500/10 text-red-500' :
-                    ativo.status === 'Manutenção' ? 'bg-amber-500/10 text-amber-500' :
-                    'bg-blue-500/10 text-blue-500'
-                  }`}>
-                    {ativo.status}
-                  </span>
-                )}
-              </div>
-              <p className="text-xs text-zinc-500">{ativo.fabricante} {ativo.modelo}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            {dbUser?.role !== 'viewer' && (
-              <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button onClick={onEdit} className="p-1.5 text-zinc-400 hover:text-white bg-zinc-800 rounded-md">
-                  <EditIcon size={14} />
-                </button>
-                <button onClick={onDelete} className="p-1.5 text-zinc-400 hover:text-red-400 bg-zinc-800 rounded-md">
-                  <TrashIcon size={14} />
-                </button>
-              </div>
-            )}
-            {FABRICANTE_DETAILS[ativo.fabricante] && (
-              <div className="p-1.5 bg-white/5 rounded-lg border border-white/5">
-                <img 
-                  src={FABRICANTE_DETAILS[ativo.fabricante].logo} 
-                  alt="" 
-                  className="w-6 h-6 object-contain opacity-40 group-hover:opacity-100 transition-opacity"
-                  referrerPolicy="no-referrer"
-                />
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="space-y-2 text-sm">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-            <div className="flex-1 min-w-0">
-              <TextField label="Endereço" value={ativo.ipv4Hostname || ativo.urlFqdnDomain} />
-            </div>
-            {(ativo.ipv4Hostname || ativo.urlFqdnDomain) && (
-              <div className="flex gap-1 justify-end sm:justify-start">
-                <button
-                  onClick={handleConnectSsh}
-                  className="p-2 bg-zinc-950 border border-zinc-800/50 rounded-lg text-emerald-500 hover:bg-emerald-500/10 transition-all"
-                  title="Conectar via SSH (Copia comando e tenta abrir terminal)"
-                >
-                  <Terminal size={14} />
-                </button>
-                <button
-                  onClick={handleCopySsh}
-                  className={`p-2 bg-zinc-950 border border-zinc-800/50 rounded-lg transition-all ${copiedSsh ? 'text-emerald-500 bg-emerald-500/10' : 'text-zinc-500 hover:text-white hover:bg-zinc-800'}`}
-                  title="Copiar Comando SSH"
-                >
-                  {copiedSsh ? <CheckCircle2 size={14} /> : <Copy size={14} />}
-                </button>
-                {(ativo.sshPassword || ativo.otherPassword || ativo.pppoePassword || ativo.consolePassword) && (
-                  <button
-                    onClick={handleCopyPass}
-                    className={`p-2 bg-zinc-950 border border-zinc-800/50 rounded-lg transition-all ${copiedPass ? 'text-emerald-500 bg-emerald-500/10' : 'text-zinc-500 hover:text-white hover:bg-zinc-800'}`}
-                    title="Copiar Senha de Acesso"
-                  >
-                    {copiedPass ? <CheckCircle2 size={14} /> : <Key size={14} />}
-                  </button>
-                )}
-                <button
-                  onClick={(e) => { e.stopPropagation(); onShowHelp(); }}
-                  className="p-2 bg-zinc-950 border border-zinc-800/50 rounded-lg text-zinc-500 hover:text-white hover:bg-zinc-800 transition-all"
-                  title="Ajuda para configurar SSH no Windows"
-                >
-                  <HelpCircle size={14} />
-                </button>
-              </div>
-            )}
-          </div>
-          
-          {isExpanded && (
-            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="space-y-2 pt-2 border-t border-zinc-800 mt-2">
-              <TextField label="SSH User" value={ativo.sshUser} />
-              <TextField label="Web User" value={ativo.otherUser} />
-              <PasswordField label="SSH Pass" value={ativo.sshPassword || ''} fieldKey="sshPassword" />
-              <PasswordField label="Web Pass" value={ativo.otherPassword || ''} fieldKey="otherPassword" />
-              <TextField label="Porta SSH" value={ativo.sshPort} />
-              <TextField label="Porta Web" value={ativo.otherPort} />
-              <TextField label="SNMP Community" value={ativo.snmpCommunity} />
-              <PasswordField label="Console Pass" value={ativo.consolePassword || ''} fieldKey="consolePassword" />
-              
-              {ativo.backupFileName && (
-                <div className="flex items-center justify-between bg-zinc-950 px-3 py-2 rounded-lg border border-zinc-800/50">
-                  <div className="flex items-center gap-2">
-                    <Save size={14} className="text-emerald-500" />
-                    <span className="text-zinc-500 text-xs font-bold uppercase">Backup</span>
-                  </div>
-                  <button 
-                    onClick={downloadBackup}
-                    className="flex items-center gap-2 text-emerald-400 hover:text-emerald-300 transition-colors"
-                  >
-                    <span className="text-[10px] font-mono truncate max-w-[150px]">{ativo.backupFileName}</span>
-                    <Download size={14} />
-                  </button>
-                </div>
-              )}
-
-              {ativo.categoriaAcesso === 'Network Topologia' && (
-                <>
-                  {ativo.networkTopologyLink && (
-                    <div className="flex items-center justify-between bg-zinc-950 px-3 py-2 rounded-lg border border-zinc-800/50">
-                      <span className="text-zinc-500 text-xs font-bold uppercase">Link Topologia</span>
-                      <a href={ativo.networkTopologyLink} target="_blank" rel="noopener noreferrer" className="text-emerald-400 hover:text-emerald-300 text-xs underline">Acessar</a>
-                    </div>
-                  )}
-                  {ativo.networkTopologyFileName && (
-                    <div className="flex items-center justify-between bg-zinc-950 px-3 py-2 rounded-lg border border-zinc-800/50">
-                      <span className="text-zinc-500 text-xs font-bold uppercase">Arquivo</span>
-                      <span className="text-zinc-300 font-mono text-xs">{ativo.networkTopologyFileName}</span>
-                    </div>
-                  )}
-                </>
-              )}
-
-              {ativo.categoriaAcesso === 'Upstream e Downstream' && (
-                <>
-                  <TextField label="Tipo Link" value={ativo.linkType} />
-                  <TextField label="ID Circuito" value={ativo.idCircuito} />
-                  <TextField label="Velocidade" value={ativo.velocidadeContratada} />
-                  <TextField label="Enlace IPv4" value={ativo.enlaceIpv4} />
-                  <TextField label="VLAN IPv4" value={ativo.idVlanIpv4} />
-                  <TextField label="Enlace IPv6" value={ativo.enlaceIpv6} />
-                  <TextField label="VLAN IPv6" value={ativo.idVlanIpv6} />
-                  <TextField label="Multihop" value={ativo.multihop} />
-                  <TextField label="Multihop IPv6" value={ativo.multihopIpv6} />
-                  <TextField label="Community Blackhole" value={ativo.communityBlackhole} />
-                  <TextField label="Endereço Abordagem" value={ativo.enderecoAbordagem} />
-                  <TextField label="Contato NOC" value={ativo.contatoNoc} />
-                  <TextField label="E-mail NOC" value={ativo.emailNoc} />
-                </>
-              )}
-
-              {ativo.categoriaAcesso === 'Clientes B2B' && (
-                <>
-                  <TextField label="ID Circuito" value={ativo.idCircuito} />
-                  <TextField label="Endereço" value={ativo.enderecoCliente} />
-                  <TextField label="Velocidade" value={ativo.velocidadeContratada} />
-                  <TextField label="Enlace IPv4" value={ativo.enlaceIpv4} />
-                  <TextField label="Enlace IPv6" value={ativo.enlaceIpv6} />
-                  <TextField label="ID VLAN" value={ativo.idVlanIpv4} />
-                  <TextField label="IPv4 Público" value={ativo.ipv4Publico} />
-                  <TextField label="IPv6 Público" value={ativo.ipv6Publico} />
-                  <TextField label="PPPoE User" value={ativo.pppoeUser} />
-                  <PasswordField label="PPPoE Pass" value={ativo.pppoePassword || ''} fieldKey="pppoePassword" />
-                  <TextField label="Last Mile" value={ativo.lastMile} />
-                  <TextField label="Contato Last Mile" value={ativo.contatoLastMile} />
-                </>
-              )}
-
-              {ativo.observacoes && (
-                <div className="bg-zinc-950 p-3 rounded-lg border border-zinc-800/50 mt-2">
-                  <span className="text-zinc-500 text-xs font-bold uppercase block mb-1">Observações</span>
-                  <div 
-                    className="text-zinc-300 text-xs prose prose-invert prose-sm max-w-none"
-                    dangerouslySetInnerHTML={{ __html: ativo.observacoes }}
-                  />
-                </div>
-              )}
-            </motion.div>
-          )}
-        </div>
-
-        <button 
-          onClick={() => setIsExpanded(!isExpanded)}
-          className="w-full mt-4 py-2 flex items-center justify-center gap-2 text-xs font-medium text-zinc-500 hover:text-zinc-300 bg-zinc-950/50 hover:bg-zinc-800 rounded-lg transition-colors"
-        >
-          {isExpanded ? (
-            <><ChevronUp size={14} /> Menos Detalhes</>
-          ) : (
-            <><ChevronDown size={14} /> Mais Detalhes</>
-          )}
-        </button>
-      </div>
-    );
-  };
+      return terms.every(term => searchableText.includes(term));
+    });
+  }, [clientes, deferredSearchClienteQuery]);
 
   const AcessosView = () => {
     const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
@@ -1829,7 +1846,33 @@ export default function App() {
       });
     };
 
-    const categories = ['Servers', 'Web Applications', 'Network Assets', 'Network Topologia', 'Upstream e Downstream', 'Clientes B2B', 'Outros'];
+    // Memoized filtered assets for better performance
+  const filteredAtivos = useMemo(() => {
+    if (!selectedCliente) return [];
+    const query = deferredSearchAtivoQuery.toLowerCase().trim();
+    const terms = query.split(/\s+/).filter(t => t.length > 0);
+    
+    return ativos.filter(a => {
+      if (a.clienteId !== selectedCliente.id) return false;
+      if (terms.length === 0) return true;
+      
+      const searchableText = [
+        a.nome,
+        a.tipo,
+        a.fabricante,
+        a.modelo,
+        a.ipv4Hostname,
+        a.ipv6Hostname,
+        a.urlFqdnDomain,
+        a.popLocation,
+        a.observacoes
+      ].join(' ').toLowerCase();
+      
+      return terms.every(term => searchableText.includes(term));
+    });
+  }, [ativos, selectedCliente, deferredSearchAtivoQuery]);
+
+  const categories = ['Servers', 'Web Applications', 'Network Assets', 'Network Topologia', 'Upstream e Downstream', 'Clientes B2B', 'Outros'];
 
     const getInfraData = (cliente: Cliente) => {
       if (Array.isArray(cliente.infraestrutura) && cliente.infraestrutura.length > 0) {
@@ -1873,9 +1916,27 @@ export default function App() {
             {/* Clients List */}
             {dbUser?.role !== 'cliente' && (
               <div className="lg:col-span-1 space-y-4">
-                <h3 className="text-sm font-bold uppercase tracking-wider text-zinc-500">Clientes</h3>
-                <div className="space-y-2">
-                  {clientes.map(c => (
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-zinc-500">Clientes</h3>
+                  <span className="text-[10px] bg-zinc-800 text-zinc-500 px-2 py-0.5 rounded-full">{filteredClientes.length}</span>
+                </div>
+                
+                <div className="relative">
+                  <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600" size={14} />
+                  <input 
+                    type="text"
+                    placeholder="Filtrar clientes..."
+                    value={searchClienteQuery}
+                    onChange={(e) => setSearchClienteQuery(e.target.value)}
+                    autoComplete="off"
+                    autoCorrect="off"
+                    spellCheck="false"
+                    className="w-full bg-zinc-900 border border-zinc-800 rounded-xl pl-9 pr-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500/50 transition-colors"
+                  />
+                </div>
+
+                <div className="space-y-2 max-h-[600px] overflow-y-auto pr-1 custom-scrollbar">
+                  {filteredClientes.map(c => (
                     <button
                       key={c.id}
                       onClick={() => setSelectedCliente(c)}
@@ -1974,6 +2035,9 @@ export default function App() {
                       placeholder="Buscar acessos por nome, tipo, fabricante ou modelo..."
                       value={searchAtivoQuery}
                       onChange={(e) => setSearchAtivoQuery(e.target.value)}
+                      autoComplete="off"
+                      autoCorrect="off"
+                      spellCheck="false"
                       className="w-full bg-zinc-900 border border-zinc-800 rounded-xl pl-12 pr-4 py-3 text-sm text-white focus:outline-none focus:border-emerald-500/50 transition-colors"
                     />
                     {searchAtivoQuery && (
@@ -2021,18 +2085,9 @@ export default function App() {
 
                   {/* Grouped Assets */}
                   {categories.map(categoria => {
-                    const ativosCategoria = ativos.filter(a => {
-                      if (a.clienteId !== selectedCliente.id) return false;
+                    const ativosCategoria = filteredAtivos.filter(a => {
                       if (a.categoriaAcesso !== categoria && (a.categoriaAcesso || categoria !== 'Outros')) return false;
-                      
-                      if (!searchAtivoQuery) return true;
-                      const query = searchAtivoQuery.toLowerCase();
-                      return (
-                        a.nome?.toLowerCase().includes(query) ||
-                        a.tipo?.toLowerCase().includes(query) ||
-                        a.fabricante?.toLowerCase().includes(query) ||
-                        a.modelo?.toLowerCase().includes(query)
-                      );
+                      return true;
                     }).sort((a, b) => {
                       // Regra especial para Network Assets: Ordem Alfabética
                       if (categoria === 'Network Assets') {
@@ -2118,11 +2173,7 @@ export default function App() {
                     </div>
                   )}
                   
-                  {ativos.filter(a => a.clienteId === selectedCliente.id).length > 0 && 
-                   !categories.some(categoria => 
-                     ativos.some(a => a.clienteId === selectedCliente.id && (a.categoriaAcesso === categoria || (!a.categoriaAcesso && categoria === 'Outros')) &&
-                     (!searchAtivoQuery || a.nome?.toLowerCase().includes(searchAtivoQuery.toLowerCase()) || a.tipo?.toLowerCase().includes(searchAtivoQuery.toLowerCase()) || a.fabricante?.toLowerCase().includes(searchAtivoQuery.toLowerCase()) || a.modelo?.toLowerCase().includes(searchAtivoQuery.toLowerCase())))
-                   ) && (
+                  {ativos.filter(a => a.clienteId === selectedCliente.id).length > 0 && filteredAtivos.length === 0 && (
                     <div className="p-8 bg-zinc-900 border border-zinc-800 rounded-2xl text-center text-zinc-500">
                       Nenhum acesso encontrado para a busca "{searchAtivoQuery}".
                     </div>
@@ -2236,11 +2287,10 @@ export default function App() {
   );
 
   const filteredCommands = useMemo(() => {
-    const query = searchQuery.toLowerCase().trim();
-    const terms = query.split(/\s+/);
+    const query = deferredSearchQuery.toLowerCase().trim();
+    const terms = query.split(/\s+/).filter(t => t.length > 0);
     
     return commands.filter(cmd => {
-      // Refined Search Logic
       const searchableText = [
         cmd.titulo,
         cmd.descricao,
@@ -2252,18 +2302,6 @@ export default function App() {
 
       const matchesSearch = terms.every(term => searchableText.includes(term));
       
-      // Special Refinement: "interface" or "port" for Huawei/Cisco
-      // If the search query contains these keywords, we prioritize or ensure they are found
-      const hasInterfaceOrPort = query.includes('interface') || query.includes('port');
-      const isHuaweiOrCisco = cmd.fabricante === 'Huawei' || cmd.fabricante === 'Cisco';
-      
-      // If the user specifically asked for this refinement, we can make it so that
-      // if those keywords are present, we only show Huawei/Cisco IF they match.
-      // But a better way is to just ensure the search covers all fields.
-      // The user's request: "Refine a pesquisa para comandos que contenham 'interface' ou 'port' ... e que sejam do fabricante Huawei ou Cisco."
-      // I'll interpret this as: if the query has these keywords, and the command matches, 
-      // it's a valid result. The `matchesSearch` already covers this.
-      
       const matchesFabricante = 
         selectedFabricante === 'All' || 
         (selectedFabricante === 'Group:Redes' ? REDES_FABRICANTES.includes(cmd.fabricante) :
@@ -2274,7 +2312,7 @@ export default function App() {
 
       return matchesSearch && matchesFabricante && matchesCategoria;
     });
-  }, [commands, searchQuery, selectedFabricante, selectedCategoria]);
+  }, [commands, deferredSearchQuery, selectedFabricante, selectedCategoria]);
 
   const groupedCommands = useMemo(() => {
     if (selectedFabricante === 'Huawei' || selectedFabricante === 'ZTE' || selectedFabricante === 'Datacom') {
@@ -2465,6 +2503,9 @@ export default function App() {
                   placeholder="Buscar..." 
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
+                  autoComplete="off"
+                  autoCorrect="off"
+                  spellCheck="false"
                   className="w-full bg-zinc-900 border border-zinc-800 rounded-xl py-2 pl-9 pr-4 text-sm focus:outline-none focus:border-emerald-500/50 transition-colors truncate"
                 />
               </div>
@@ -3289,7 +3330,9 @@ function AtivoForm({ onClose, user, clienteId, initialData }: { onClose: () => v
     fabricante: initialData?.fabricante || '',
     modelo: initialData?.modelo || '',
     ipv4Hostname: initialData?.ipv4Hostname || '',
+    ipv6Hostname: initialData?.ipv6Hostname || '',
     urlFqdnDomain: initialData?.urlFqdnDomain || '',
+    popLocation: initialData?.popLocation || '',
     sshPort: initialData?.sshPort || '',
     sshUser: initialData?.sshUser || '',
     sshPassword: initialData?.sshPassword || '',
@@ -3445,6 +3488,15 @@ function AtivoForm({ onClose, user, clienteId, initialData }: { onClose: () => v
                 <input 
                   value={formData.modelo}
                   onChange={e => setFormData({...formData, modelo: e.target.value})}
+                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Site (POP/Datacenter)</label>
+                <input 
+                  value={formData.popLocation}
+                  onChange={e => setFormData({...formData, popLocation: e.target.value})}
+                  placeholder="Ex: POP-SP, DC-01, Rack 02"
                   className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50"
                 />
               </div>
@@ -3745,6 +3797,14 @@ function AtivoForm({ onClose, user, clienteId, initialData }: { onClose: () => v
                     <input 
                       value={formData.ipv4Hostname}
                       onChange={e => setFormData({...formData, ipv4Hostname: e.target.value})}
+                      className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50 font-mono"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Endereço IPv6</label>
+                    <input 
+                      value={formData.ipv6Hostname}
+                      onChange={e => setFormData({...formData, ipv6Hostname: e.target.value})}
                       className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50 font-mono"
                     />
                   </div>
