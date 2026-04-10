@@ -413,7 +413,7 @@ const CommandCard = ({
     animate={{ opacity: 1, scale: 1 }}
     whileHover={{ y: -4 }}
     onClick={onClick}
-    className="group bg-zinc-900 border border-zinc-800 p-4 rounded-2xl cursor-pointer hover:border-emerald-500/30 hover:bg-zinc-900/80 transition-all shadow-sm"
+    className="group bg-zinc-900 border border-zinc-800 p-4 rounded-2xl cursor-pointer hover:border-emerald-500/80 hover:bg-zinc-900/80 transition-all shadow-sm hover:shadow-[0_0_25px_rgba(16,185,129,0.1)] hover:-translate-y-1"
   >
     <div className="flex items-start justify-between mb-3">
       <div className="p-1.5 bg-zinc-800 rounded-lg group-hover:bg-emerald-500/10 group-hover:text-emerald-500 transition-colors">
@@ -761,7 +761,11 @@ const AtivoCard = ({ ativo, dbUser, onEdit, onDelete, onShowHelp }: { ativo: Ati
   };
 
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 sm:p-6 hover:border-emerald-500/30 transition-all group relative flex flex-col h-full">
+    <div className={`bg-zinc-900 border rounded-2xl p-4 sm:p-6 transition-all group relative flex flex-col h-full hover:-translate-y-1 ${
+      isExpanded 
+        ? 'border-emerald-500/50 shadow-[0_0_20px_rgba(16,185,129,0.1)] ring-1 ring-emerald-500/20' 
+        : 'border-zinc-800 hover:border-emerald-500/60 hover:shadow-[0_0_25px_rgba(16,185,129,0.1)] hover:bg-zinc-800/50'
+    }`}>
       <div className="flex-1">
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-3 min-w-0">
@@ -2008,7 +2012,11 @@ export default function App() {
                     <button
                       key={c.id}
                       onClick={() => setSelectedCliente(c)}
-                      className={`w-full text-left px-4 py-3 rounded-xl transition-colors flex items-start gap-3 ${selectedCliente?.id === c.id ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : 'bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800'}`}
+                      className={`w-full text-left px-4 py-3 rounded-xl transition-all flex items-start gap-3 ${
+                        selectedCliente?.id === c.id 
+                          ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 shadow-[0_0_15px_rgba(16,185,129,0.1)] ring-1 ring-emerald-500/20' 
+                          : 'bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800'
+                      }`}
                     >
                       <Building2 size={18} className="mt-0.5 shrink-0" />
                       <div className="flex flex-col min-w-0">
