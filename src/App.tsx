@@ -58,6 +58,7 @@ import {
   History,
   Clock,
   RotateCcw,
+  Star,
   HelpCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -255,7 +256,7 @@ const SidebarGroup = ({
             exit={{ height: 0, opacity: 0 }}
             className="overflow-hidden pl-4 space-y-1"
           >
-            {group.fabricantes.map(f => (
+            {[...group.fabricantes].sort().map(f => (
               <button 
                 key={f}
                 onClick={() => {
@@ -320,7 +321,7 @@ const GroupDashboard = ({ groupKey, setSelectedFabricante, commands }: {
         <Layers size={16} /> Dashboard de Fabricantes
       </h3>
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 3xl:grid-cols-10 gap-4">
-        {group.fabricantes.map(f => (
+        {[...group.fabricantes].sort().map(f => (
           <motion.button
             key={f}
             whileHover={{ scale: 1.02, y: -2 }}
@@ -413,23 +414,28 @@ const CommandCard = ({
     animate={{ opacity: 1, scale: 1 }}
     whileHover={{ y: -4 }}
     onClick={onClick}
-    className="group bg-zinc-900 border border-zinc-800 p-4 rounded-2xl cursor-pointer hover:border-emerald-500/80 hover:bg-zinc-900/80 transition-all shadow-sm hover:shadow-[0_0_25px_rgba(16,185,129,0.1)] hover:-translate-y-1"
+    className={`group bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-4 rounded-2xl cursor-pointer hover:border-emerald-500/80 hover:bg-zinc-50 dark:hover:bg-zinc-900/80 transition-all shadow-sm hover:shadow-[0_0_25px_rgba(16,185,129,0.1)] hover:-translate-y-1`}
   >
     <div className="flex items-start justify-between mb-3">
-      <div className="p-1.5 bg-zinc-800 rounded-lg group-hover:bg-emerald-500/10 group-hover:text-emerald-500 transition-colors">
+      <div className="p-1.5 bg-zinc-100 dark:bg-zinc-800 rounded-lg group-hover:bg-emerald-500/10 group-hover:text-emerald-500 transition-colors">
         {getFabricanteIcon(cmd.fabricante, 18)}
       </div>
       <div className="flex items-center gap-2">
-        <span className="text-[9px] font-bold uppercase tracking-widest text-zinc-500 bg-zinc-800 px-1.5 py-0.5 rounded">
+        {cmd.isPremium && (
+          <span className="text-[9px] font-bold uppercase tracking-widest text-amber-500 bg-amber-500/10 px-1.5 py-0.5 rounded flex items-center gap-1">
+            <Star size={10} fill="currentColor" /> Premium
+          </span>
+        )}
+        <span className="text-[9px] font-bold uppercase tracking-widest text-zinc-500 bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded">
           {cmd.categoria}
         </span>
       </div>
     </div>
-    <h3 className="font-bold text-base mb-1.5 group-hover:text-emerald-400 transition-colors">{cmd.titulo}</h3>
-    <p className="text-zinc-400 text-xs line-clamp-2 mb-3 leading-relaxed whitespace-pre-wrap">{cmd.descricao}</p>
+    <h3 className="font-bold text-base mb-1.5 text-zinc-900 dark:text-white group-hover:text-emerald-400 transition-colors">{cmd.titulo}</h3>
+    <p className="text-zinc-600 dark:text-zinc-400 text-xs line-clamp-2 mb-3 leading-relaxed whitespace-pre-wrap">{cmd.descricao}</p>
     <div className="flex flex-wrap gap-1.5">
       {(cmd.tags || []).slice(0, 3).map(tag => (
-        <span key={tag} className="text-[10px] text-zinc-500 border border-zinc-800 px-2 py-0.5 rounded-full">
+        <span key={tag} className="text-[10px] text-zinc-500 border border-zinc-200 dark:border-zinc-800 px-2 py-0.5 rounded-full">
           #{tag}
         </span>
       ))}
@@ -761,10 +767,10 @@ const AtivoCard = ({ ativo, dbUser, onEdit, onDelete, onShowHelp }: { ativo: Ati
   };
 
   return (
-    <div className={`bg-zinc-900 border rounded-2xl p-4 sm:p-6 transition-all group relative flex flex-col h-full hover:-translate-y-1 ${
+    <div className={`bg-white dark:bg-zinc-900 border rounded-2xl p-4 sm:p-6 transition-all group relative flex flex-col h-full hover:-translate-y-1 ${
       isExpanded 
-        ? 'border-emerald-500/50 shadow-[0_0_20px_rgba(16,185,129,0.1)] ring-1 ring-emerald-500/20' 
-        : 'border-zinc-800 hover:border-emerald-500/60 hover:shadow-[0_0_25px_rgba(16,185,129,0.1)] hover:bg-zinc-800/50'
+        ? 'border-emerald-500/50 shadow-[0_0_20px_rgba(16,185,129,0.1)] ring-1 ring-emerald-500/20 bg-zinc-50 dark:bg-zinc-900' 
+        : 'border-zinc-200 dark:border-zinc-800 hover:border-emerald-500/60 hover:shadow-[0_0_25px_rgba(16,185,129,0.1)] hover:bg-zinc-50 dark:hover:bg-zinc-800/50'
     }`}>
       <div className="flex-1">
         <div className="flex items-start justify-between mb-4">
@@ -783,11 +789,11 @@ const AtivoCard = ({ ativo, dbUser, onEdit, onDelete, onShowHelp }: { ativo: Ati
                <Box size={20} />}
             </div>
             <div className="min-w-0">
-              <h4 className="text-sm sm:text-base font-bold text-white truncate group-hover:text-emerald-400 transition-colors">{ativo.nome}</h4>
+              <h4 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-white truncate group-hover:text-emerald-400 transition-colors">{ativo.nome}</h4>
               <div className="flex items-center gap-2 mt-0.5">
                 <span className="text-[10px] sm:text-xs text-zinc-500 uppercase font-bold tracking-wider">{ativo.tipo}</span>
-                <span className="text-zinc-700">•</span>
-                <span className="text-[10px] sm:text-xs text-zinc-400 truncate">
+                <span className="text-zinc-300 dark:text-zinc-700">•</span>
+                <span className="text-[10px] sm:text-xs text-zinc-500 dark:text-zinc-400 truncate">
                   {ativo.fabricante} {ativo.modelo} {ativo.popLocation && `| ${ativo.popLocation}`}
                 </span>
               </div>
@@ -795,7 +801,7 @@ const AtivoCard = ({ ativo, dbUser, onEdit, onDelete, onShowHelp }: { ativo: Ati
           </div>
           {dbUser?.role !== 'viewer' && (
             <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-              <button onClick={onEdit} className="p-2 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-lg transition-all">
+              <button onClick={onEdit} className="p-2 text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-lg transition-all">
                 <EditIcon size={16} />
               </button>
               <button onClick={onDelete} className="p-2 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all">
@@ -1612,37 +1618,46 @@ export default function App() {
   };
 
   const ConfiguracoesView = () => (
-    <div className="flex-1 flex flex-col p-8 bg-zinc-950 overflow-y-auto">
+    <div className="flex-1 flex flex-col p-8 bg-white dark:bg-zinc-950 overflow-y-auto transition-colors duration-300 relative">
+      <div className="absolute top-8 right-8 flex gap-2">
+        <button 
+          onClick={toggleTheme}
+          className="p-3 rounded-2xl transition-all border border-zinc-200 dark:border-zinc-800 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white bg-zinc-100 dark:bg-zinc-900/50 hover:bg-zinc-200 dark:hover:bg-zinc-800 shadow-sm"
+          title={theme === 'light' ? 'Modo Escuro' : 'Modo Claro'}
+        >
+          {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
+        </button>
+      </div>
       <div className="max-w-4xl w-full mx-auto space-y-8">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-3xl font-bold tracking-tight text-white flex items-center gap-3">
+            <h2 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white flex items-center gap-3">
               <Settings className="text-emerald-500" size={32} />
               Configurações
             </h2>
-            <p className="text-zinc-400 mt-2">Gerencie o sistema, clientes e usuários.</p>
+            <p className="text-zinc-500 dark:text-zinc-400 mt-2">Gerencie o sistema, clientes e usuários.</p>
           </div>
         </div>
 
         {/* Tabs */}
-        <div className="flex items-center gap-2 bg-zinc-900 p-1 rounded-xl w-fit border border-zinc-800">
+        <div className="flex items-center gap-2 bg-zinc-100 dark:bg-zinc-900 p-1 rounded-xl w-fit border border-zinc-200 dark:border-zinc-800">
           <button
             onClick={() => setConfigTab('geral')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${configTab === 'geral' ? 'bg-zinc-800 text-white' : 'text-zinc-400 hover:text-zinc-200'}`}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${configTab === 'geral' ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'}`}
           >
             <Settings size={16} />
             Geral
           </button>
           <button
             onClick={() => setConfigTab('clientes')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${configTab === 'clientes' ? 'bg-zinc-800 text-white' : 'text-zinc-400 hover:text-zinc-200'}`}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${configTab === 'clientes' ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'}`}
           >
             <Building2 size={16} />
             Clientes
           </button>
           <button
             onClick={() => setConfigTab('usuarios')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${configTab === 'usuarios' ? 'bg-zinc-800 text-white' : 'text-zinc-400 hover:text-zinc-200'}`}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${configTab === 'usuarios' ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'}`}
           >
             <UserIcon size={16} />
             Usuários
@@ -1972,15 +1987,15 @@ export default function App() {
     };
 
     return (
-      <div className="flex-1 flex flex-col p-8 bg-zinc-950 overflow-y-auto">
+      <div className="flex-1 flex flex-col p-8 bg-white dark:bg-zinc-950 overflow-y-auto transition-colors duration-300">
         <div className="max-w-[1800px] w-full mx-auto space-y-8">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-3xl font-bold tracking-tight text-white flex items-center gap-3">
+              <h2 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white flex items-center gap-3">
                 <ShieldCheck className="text-emerald-500" size={32} />
                 Acessos
               </h2>
-              <p className="text-zinc-400 mt-2">Gerencie os acessos de infraestrutura e sistemas dos clientes.</p>
+              <p className="text-zinc-500 dark:text-zinc-400 mt-2">Gerencie os acessos de infraestrutura e sistemas dos clientes.</p>
             </div>
           </div>
 
@@ -2274,7 +2289,16 @@ export default function App() {
   };
 
   const HomeView = () => (
-    <div className="flex-1 flex flex-col p-8 bg-zinc-950 overflow-y-auto">
+    <div className="flex-1 flex flex-col p-8 bg-white dark:bg-zinc-950 overflow-y-auto transition-colors duration-300 relative">
+      <div className="absolute top-8 right-8 flex gap-2">
+        <button 
+          onClick={toggleTheme}
+          className="p-3 rounded-2xl transition-all border border-zinc-200 dark:border-zinc-800 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white bg-zinc-100 dark:bg-zinc-900/50 hover:bg-zinc-200 dark:hover:bg-zinc-800 shadow-sm"
+          title={theme === 'light' ? 'Modo Escuro' : 'Modo Claro'}
+        >
+          {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
+        </button>
+      </div>
       <div className="max-w-6xl w-full mx-auto space-y-12 py-12">
         <div className="text-center space-y-4">
           <motion.div 
@@ -2282,22 +2306,22 @@ export default function App() {
             animate={{ scale: 1, opacity: 1 }}
             className="inline-block mb-4"
           >
-            <Logo size={48} className="p-4 rounded-3xl border-2" />
+            <Logo size={48} className="p-4 rounded-3xl border-2 border-zinc-200 dark:border-zinc-800" />
           </motion.div>
-          <h1 className="text-5xl font-extrabold tracking-tight text-white">
+          <h1 className="text-5xl font-extrabold tracking-tight text-zinc-900 dark:text-white">
             Bem-vindo ao <span className="text-emerald-500">NOCPedia</span>
           </h1>
-          <p className="text-zinc-400 text-xl max-w-2xl mx-auto leading-relaxed">
+          <p className="text-zinc-500 dark:text-zinc-400 text-xl max-w-2xl mx-auto leading-relaxed">
             Sua central de conhecimento técnico, documentação de comandos e gestão de ativos de rede.
           </p>
         </div>
 
-        <div className="p-8 bg-zinc-900/50 border border-zinc-800 rounded-3xl text-left space-y-6">
+        <div className="p-8 bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-3xl text-left space-y-6">
           <h2 className="text-2xl font-bold text-emerald-400 flex items-center gap-3">
             <Info size={24} />
             Nossa História
           </h2>
-          <div className="space-y-4 text-zinc-400 leading-relaxed text-lg">
+          <div className="space-y-4 text-zinc-600 dark:text-zinc-400 leading-relaxed text-lg">
             <p>
               O NOCPedia nasceu da necessidade de centralizar o conhecimento técnico disperso em diversas plataformas e fabricantes. 
               Como profissionais de TI, sabemos que a agilidade no troubleshooting e na configuração de ativos é vital para a continuidade dos negócios.
@@ -2305,7 +2329,7 @@ export default function App() {
             <p>
               Iniciamos como um repositório simples de comandos Huawei e Cisco, mas rapidamente evoluímos para uma plataforma colaborativa que abrange desde infraestrutura de redes legadas até as mais modernas tecnologias de orquestração de containers e servidores Linux/Windows.
             </p>
-            <p className="font-medium text-zinc-300">
+            <p className="font-medium text-zinc-800 dark:text-zinc-300">
               Hoje, o NOCPedia é a bússola para administradores de sistemas e engenheiros de rede que buscam precisão, rapidez e uma base de conhecimento confiável para o dia a dia da operação.
             </p>
           </div>
@@ -2366,7 +2390,7 @@ export default function App() {
     const query = deferredSearchQuery.toLowerCase().trim();
     const terms = query.split(/\s+/).filter(t => t.length > 0);
     
-    return commands.filter(cmd => {
+    const filtered = commands.filter(cmd => {
       const searchableText = [
         cmd.titulo,
         cmd.descricao,
@@ -2386,22 +2410,34 @@ export default function App() {
       
       const matchesCategoria = selectedCategoria === 'All' || cmd.categoria === selectedCategoria;
 
-      return matchesSearch && matchesFabricante && matchesCategoria;
+      const isUserAuthorized = !cmd.isPremium || (dbUser?.role === 'admin' || dbUser?.role === 'cliente');
+
+      return matchesSearch && matchesFabricante && matchesCategoria && isUserAuthorized;
     });
+
+    return filtered.sort((a, b) => a.titulo.localeCompare(b.titulo));
   }, [commands, deferredSearchQuery, selectedFabricante, selectedCategoria]);
 
   const groupedCommands = useMemo(() => {
-    if (selectedFabricante === 'Huawei' || selectedFabricante === 'ZTE' || selectedFabricante === 'Datacom') {
+    if (!selectedFabricante.toString().startsWith('Group:')) {
       const groups: { [key: string]: Command[] } = {};
       filteredCommands.forEach(cmd => {
-        const groupName = cmd.subgrupo || 'Geral';
+        const groupName = selectedFabricante === 'All' ? (cmd.categoria || 'Geral') : (cmd.subgrupo || cmd.categoria || 'Geral');
         if (!groups[groupName]) groups[groupName] = [];
         groups[groupName].push(cmd);
       });
+      
       return groups;
     }
     return null;
   }, [filteredCommands, selectedFabricante]);
+
+  // Auto-expand subgroups when manufacturer changes
+  useEffect(() => {
+    if (groupedCommands) {
+      setExpandedSubgroups(new Set(Object.keys(groupedCommands)));
+    }
+  }, [groupedCommands]);
 
   if (loading) {
     return (
@@ -2437,7 +2473,7 @@ export default function App() {
   }
 
   return (
-    <div className="flex h-screen bg-zinc-950 text-zinc-100 overflow-hidden font-sans">
+    <div className="flex h-screen bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 overflow-hidden font-sans transition-colors duration-300">
       {/* Sidebar */}
       <AnimatePresence>
         {isSidebarOpen && (
@@ -2445,19 +2481,19 @@ export default function App() {
             initial={{ x: -300 }}
             animate={{ x: 0 }}
             exit={{ x: -300 }}
-            className="w-72 border-r border-zinc-800 bg-zinc-900/50 flex flex-col z-20"
+            className="w-72 border-r border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50 flex flex-col z-20"
           >
             <div 
-              className="p-6 border-bottom border-zinc-800 flex items-center justify-between cursor-pointer hover:bg-zinc-800/50 transition-colors"
+              className="p-6 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-800/50 transition-colors"
               onClick={() => setCurrentView('home')}
             >
               <div className="flex items-center gap-3">
                 <Logo size={20} />
-                <span className="font-bold text-xl tracking-tight">NOCPedia</span>
+                <span className="font-bold text-xl tracking-tight text-zinc-900 dark:text-white">NOCPedia</span>
               </div>
               <button 
                 onClick={(e) => { e.stopPropagation(); setIsSidebarOpen(false); }} 
-                className="p-2 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-lg transition-all"
+                className="p-2 text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-lg transition-all"
                 title="Minimizar Menu"
               >
                 <X size={20} />
@@ -2489,7 +2525,7 @@ export default function App() {
 
               {/* Other Categories */}
               <div className="space-y-1">
-                {["Docker", "Kubernetes", "Desenvolvimento"].map(f => (
+                {["Desenvolvimento", "Docker", "Kubernetes"].map(f => (
                   <button 
                     key={f}
                     onClick={() => {
@@ -2517,10 +2553,17 @@ export default function App() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
+                    <button 
+                      onClick={toggleTheme}
+                      className="flex-1 flex items-center justify-center gap-2 px-2 py-2 text-xs font-medium text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white bg-zinc-200/50 dark:bg-zinc-800/50 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+                      title={theme === 'light' ? 'Modo Escuro' : 'Modo Claro'}
+                    >
+                      {theme === 'light' ? <Moon size={16} /> : <Sun size={16} />}
+                    </button>
                     {dbUser?.role !== 'cliente' && (
                       <button 
                         onClick={() => setCurrentView('configuracoes')}
-                        className={`flex-1 flex items-center justify-center gap-2 px-2 py-2 text-xs font-medium rounded-lg transition-colors ${currentView === 'configuracoes' ? 'bg-emerald-500/10 text-emerald-500' : 'text-zinc-400 hover:text-white bg-zinc-800/50 hover:bg-zinc-800'}`}
+                        className={`flex-1 flex items-center justify-center gap-2 px-2 py-2 text-xs font-medium rounded-lg transition-colors ${currentView === 'configuracoes' ? 'bg-emerald-500/10 text-emerald-500' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white bg-zinc-200/50 dark:bg-zinc-800/50 hover:bg-zinc-200 dark:hover:bg-zinc-800'}`}
                         title="Configurações"
                       >
                         <Settings size={16} />
@@ -2565,14 +2608,14 @@ export default function App() {
         ) : (
           <>
             {/* Topbar */}
-            <header className="h-16 border-b border-zinc-800 bg-zinc-950/80 backdrop-blur-md flex items-center px-3 sm:px-6 gap-2 sm:gap-4 sticky top-0 z-10">
+            <header className="h-16 border-b border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-md flex items-center px-3 sm:px-6 gap-2 sm:gap-4 sticky top-0 z-10 transition-colors duration-300">
               {!isSidebarOpen && (
-                <button onClick={() => setIsSidebarOpen(true)} className="p-2 text-zinc-400 hover:text-white shrink-0">
+                <button onClick={() => setIsSidebarOpen(true)} className="p-2 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white shrink-0">
                   <Menu size={20} />
                 </button>
               )}
               <div className="flex-1 relative min-w-0">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={16} />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 dark:text-zinc-500" size={16} />
                 <input 
                   ref={searchInputRef}
                   type="text" 
@@ -2582,15 +2625,22 @@ export default function App() {
                   autoComplete="off"
                   autoCorrect="off"
                   spellCheck="false"
-                  className="w-full bg-zinc-900 border border-zinc-800 rounded-xl py-2 pl-9 pr-4 text-sm focus:outline-none focus:border-emerald-500/50 transition-colors truncate"
+                  className="w-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl py-2 pl-9 pr-4 text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-emerald-500/50 transition-colors truncate"
                 />
               </div>
 
               <div className="hidden md:flex items-center gap-2">
+                <button 
+                  onClick={toggleTheme}
+                  className="p-2 rounded-xl transition-all border border-zinc-200 dark:border-zinc-800 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                  title={theme === 'light' ? 'Modo Escuro' : 'Modo Claro'}
+                >
+                  {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
+                </button>
                 {dbUser?.role !== 'cliente' && (
                   <button 
                     onClick={() => setCurrentView('configuracoes')}
-                    className="p-2 rounded-xl transition-all border border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800"
+                    className="p-2 rounded-xl transition-all border border-zinc-200 dark:border-zinc-800 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800"
                     title="Configurações"
                   >
                     <Settings size={18} />
@@ -2648,19 +2698,19 @@ export default function App() {
             {currentView === 'acessos' ? (
               <AcessosView />
             ) : (
-              <div className="flex-1 overflow-y-auto p-6">
+              <div className="flex-1 overflow-y-auto p-6 bg-white dark:bg-zinc-950 transition-colors duration-300">
                 <div className="max-w-[1920px] mx-auto">
                   <Breadcrumbs />
                   <div className="flex items-center justify-between mb-8">
                     <div>
-                      <h2 className="text-2xl font-bold tracking-tight">
+                      <h2 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white">
                         {selectedFabricante === 'All' ? 'Base de Conhecimento' : selectedFabricante}
                       </h2>
-                      <p className="text-zinc-500 text-sm">
+                      <p className="text-zinc-500 dark:text-zinc-400 text-sm">
                         {filteredCommands.length} {filteredCommands.length === 1 ? 'comando encontrado' : 'comandos encontrados'}
                       </p>
                     </div>
-                    <div className="flex items-center gap-2 text-xs text-zinc-500 bg-zinc-900 px-3 py-1.5 rounded-lg border border-zinc-800">
+                    <div className="flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-900 px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800">
                       <Filter size={14} />
                       <span>Filtros ativos: {selectedFabricante} / {selectedCategoria}</span>
                     </div>
@@ -2773,14 +2823,39 @@ export default function App() {
               <GroupDashboard groupKey="Server" setSelectedFabricante={setSelectedFabricante} commands={commands} />
             )}
 
-            {selectedFabricante !== 'All' && !selectedFabricante.toString().startsWith('Group:') && (
-              groupedCommands ? (
-                Object.entries(groupedCommands).map(([category, cmds]) => {
-                  const isExpanded = expandedSubgroups.has(category);
-                  return (
-                    <div key={category} className="mb-6">
-                      <button 
-                        onClick={() => toggleSubgroup(category)}
+            {!selectedFabricante.toString().startsWith('Group:') && (
+              <>
+                {groupedCommands && Object.keys(groupedCommands).length > 1 && (
+                  <div className="flex flex-wrap gap-2 mb-8 animate-in fade-in slide-in-from-top-4 duration-500">
+                    {Object.keys(groupedCommands).sort().map(category => (
+                      <button
+                        key={category}
+                        onClick={() => {
+                          if (!expandedSubgroups.has(category)) {
+                            toggleSubgroup(category);
+                          }
+                          setTimeout(() => {
+                            const element = document.getElementById(`subgroup-${category}`);
+                            if (element) {
+                              element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            }
+                          }, 100);
+                        }}
+                        className="px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-500 dark:text-zinc-400 hover:border-emerald-500/50 hover:text-emerald-500 hover:bg-emerald-500/5 transition-all shadow-sm"
+                      >
+                        {category}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {groupedCommands ? (
+                  Object.entries(groupedCommands).sort(([a], [b]) => a.localeCompare(b)).map(([category, cmds]) => {
+                    const isExpanded = expandedSubgroups.has(category);
+                    return (
+                      <div key={category} id={`subgroup-${category}`} className="mb-6 scroll-mt-24">
+                        <button 
+                          onClick={() => toggleSubgroup(category)}
                         className="w-full flex items-center justify-between text-lg font-bold text-emerald-500 border-b border-zinc-800 pb-2 mb-4 hover:bg-emerald-500/5 transition-colors group"
                       >
                         <div className="flex items-center gap-2">
@@ -2823,8 +2898,9 @@ export default function App() {
                     />
                   ))}
                 </div>
-              )
-            )}
+              )}
+            </>
+          )}
 
             {filteredCommands.length === 0 && (
               <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -4279,6 +4355,7 @@ function CommandForm({ onClose, user, initialData, addToast }: { onClose: () => 
     fabricante: initialData?.fabricante || FABRICANTES[0],
     categoria: initialData?.categoria || CATEGORIAS[0],
     subgrupo: initialData?.subgrupo || '',
+    isPremium: initialData?.isPremium || false,
     tags: (initialData?.tags || []).join(', ') || '',
     linkExterno: initialData?.linkExterno || ''
   });
@@ -4410,6 +4487,20 @@ function CommandForm({ onClose, user, initialData, addToast }: { onClose: () => 
                 className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500/50"
               />
             </div>
+          </div>
+
+          <div className="flex items-center gap-3 p-4 bg-amber-500/5 border border-amber-500/10 rounded-xl">
+            <input 
+              type="checkbox" 
+              id="isPremium"
+              checked={formData.isPremium}
+              onChange={e => setFormData({...formData, isPremium: e.target.checked})}
+              className="w-4 h-4 rounded border-zinc-800 text-amber-500 focus:ring-amber-500 bg-zinc-900"
+            />
+            <label htmlFor="isPremium" className="flex items-center gap-2 text-sm font-medium text-amber-500 cursor-pointer">
+              <Star size={16} fill="currentColor" /> Marcar como Comando Premium
+              <span className="text-[10px] text-zinc-500 font-normal ml-2">(Visível apenas para Admin e Clientes)</span>
+            </label>
           </div>
 
           <div className="space-y-2">

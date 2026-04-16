@@ -140,6 +140,7 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     fabricante: "Datacom",
     categoria: "Sistema",
     subgrupo: "Gerenciamento",
+    isPremium: true,
     tags: ["datacom", "login", "management", "mgmt"],
     uid,
     createdAt: serverTimestamp(),

@@ -113,6 +113,7 @@ export interface Command {
   fabricante: string;
   categoria: string;
   subgrupo?: string;
+  isPremium?: boolean;
   tags: string[];
   linkExterno?: string;
   uid: string;

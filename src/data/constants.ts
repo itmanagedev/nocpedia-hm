@@ -9,14 +9,14 @@ import {
 import { Fabricante } from '../types';
 
 export const FABRICANTES: Fabricante[] = [
-  "Huawei", "Cisco", "Juniper", "Datacom", "ZTE", "Mikrotik", "Arista",
-  "Fiberhome", "Furukawa", "Hillstone", "A10", "DELL",
-  "VMware", "Proxmox", "Trello", "Web", "Google", "Microsoft",
-  "Linux", "Windows Server", "Docker", "Kubernetes", "Desenvolvimento"
+  "A10", "Arista", "Cisco", "Datacom", "DELL", "Desenvolvimento", "Docker", 
+  "Fiberhome", "Furukawa", "Google", "Hillstone", "Huawei", "Juniper", 
+  "Kubernetes", "Linux", "Microsoft", "Mikrotik", "Proxmox", "Trello", 
+  "VMware", "Web", "Windows Server", "ZTE"
 ];
 
-export const REDES_FABRICANTES = ["Huawei", "Cisco", "Juniper", "Datacom", "ZTE", "Mikrotik", "Arista", "Fiberhome", "Furukawa", "Hillstone", "A10"];
-export const SERVER_FABRICANTES = ["Linux", "Windows Server", "DELL", "VMware", "Proxmox", "Docker"];
+export const REDES_FABRICANTES = ["A10", "Arista", "Cisco", "Datacom", "Fiberhome", "Furukawa", "Hillstone", "Huawei", "Juniper", "Mikrotik", "ZTE"];
+export const SERVER_FABRICANTES = ["DELL", "Docker", "Linux", "Proxmox", "VMware", "Windows Server"];
 
 export interface FabricanteDetail {
   nome: string;
