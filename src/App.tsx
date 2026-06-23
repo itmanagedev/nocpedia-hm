@@ -61,26 +61,14 @@ import {
   HelpCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  collection, 
-  query, 
-  onSnapshot, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc, 
-  doc, 
-  serverTimestamp, 
-  orderBy,
-  where,
-  getDocs,
-  getDoc,
-  setDoc,
-  getDocFromServer,
-  writeBatch,
-  deleteField
-} from 'firebase/firestore';
-import { db } from './firebase';
 import { supabase } from './supabase';
+import {
+  fetchCommands, addCommand, updateCommand, deleteCommand, seedCommands,
+  fetchClientes, getCliente, addCliente, updateCliente, deleteCliente,
+  fetchAtivos, addAtivo, updateAtivo, deleteAtivo,
+  fetchBackups, getBackup, setBackup, pruneBackups, deleteBackup,
+  fetchUsers, updateUserRole,
+} from './db';
 import { Command, Fabricante, Cliente, Ativo, DBUser, Backup } from './types';
 import { getInitialCommands } from './data/initialCommands';
 import Markdown from 'react-markdown';
@@ -94,50 +82,6 @@ import {
   REDES_FABRICANTES, 
   SERVER_FABRICANTES 
 } from './data/constants';
-
-enum OperationType {
-  CREATE = 'create',
-  UPDATE = 'update',
-  REMOVE = 'delete',
-  LIST = 'list',
-  GET = 'get',
-  WRITE = 'write',
-}
-
-interface FirestoreErrorInfo {
-  error: string;
-  operationType: OperationType;
-  path: string | null;
-  authInfo: {
-    userId: string | undefined;
-    email: string | null | undefined;
-  }
-}
-
-async function getCurrentUserId() {
-  try {
-    const { data: { session } } = await supabase.auth.getSession();
-    return session?.user;
-  } catch {
-    return null;
-  }
-}
-
-function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
-  getCurrentUserId().then(currentUser => {
-    const errInfo: FirestoreErrorInfo = {
-      error: error instanceof Error ? error.message : String(error),
-      authInfo: {
-        userId: currentUser?.id,
-        email: currentUser?.email,
-      },
-      operationType,
-      path
-    }
-    console.error('Firestore Error: ', JSON.stringify(errInfo));
-  });
-  throw new Error(error instanceof Error ? error.message : String(error));
-}
 
 export class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean, error: any }> {
   constructor(props: { children: React.ReactNode }) {
@@ -985,6 +929,9 @@ export default function App() {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [backupsList, setBackupsList] = useState<Backup[]>([]);
   const [isRestoring, setIsRestoring] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const refreshData = () => setRefreshKey(k => k + 1);
 
   const [showSshHelp, setShowSshHelp] = useState(false);
 
@@ -1143,10 +1090,6 @@ export default function App() {
       setUser(su);
       if (su) {
         try {
-          // Test connection
-          await getDocFromServer(doc(db, 'test', 'connection')).catch(() => {});
-
-          // Read role from Supabase user_profiles
           const { data: profile } = await supabase
             .from('user_profiles')
             .select('*')
@@ -1156,19 +1099,14 @@ export default function App() {
           const isDefaultAdmin = su.email === 'noc.itmanage@gmail.com';
 
           if (!profile) {
-            // Auto-create profile in Supabase
             const role = isDefaultAdmin ? 'admin' : 'viewer';
             await supabase.from('user_profiles').insert({
               id: su.id,
               email: su.email,
               role,
-              firebase_uid: su.id,
             });
             setIsAdmin(isDefaultAdmin);
             setDbUser({ uid: su.id, email: su.email!, role, id: su.id } as DBUser);
-
-            // Also create Firestore doc for backward compat
-            await setDoc(doc(db, 'users', su.id), { uid: su.id, email: su.email, role }).catch(() => {});
           } else {
             if (isDefaultAdmin && profile.role !== 'admin') {
               await supabase.from('user_profiles').update({ role: 'admin' }).eq('id', su.id);
@@ -1194,75 +1132,44 @@ export default function App() {
 
   // Fetch commands
   useEffect(() => {
-    const q = query(collection(db, 'commands'), orderBy('createdAt', 'desc'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const cmds = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Command[];
+    fetchCommands().then(result => {
+      if (result.error) { console.error("Error fetching commands:", result.error); return; }
+      const cmds = result.data!;
       setCommands(cmds);
       
-      // Auto-sync logic for admins
       if (isAdmin && user && !isSeedingRef.current) {
         const hasDatacom = cmds.some(c => c.fabricante === 'Datacom');
         const hasLinux = cmds.some(c => c.fabricante === 'Linux');
         const hasDocker = cmds.some(c => c.fabricante === 'Docker');
         
-        // If major new manufacturers are missing, trigger sync
         if (cmds.length > 0 && (!hasDatacom || !hasLinux || !hasDocker)) {
-          seedInitialData(user.id, true, cmds); // pass current cmds
+          seedInitialData(user.id, true, cmds);
         }
       }
-    }, (error) => {
-      if (error.message.includes('insufficient permissions')) {
-        handleFirestoreError(error, OperationType.LIST, 'commands');
-      } else {
-        console.error("Firestore Error:", error);
-      }
     });
-
-    return unsubscribe;
-  }, [isAdmin, user]);
+  }, [isAdmin, user, refreshKey]);
 
   // Fetch clients
   useEffect(() => {
     if (!user || !dbUser) return;
     
     if (dbUser.role === 'cliente' && dbUser.clienteId) {
-      const unsubscribe = onSnapshot(doc(db, 'clientes', dbUser.clienteId), (docSnap) => {
-        if (docSnap.exists()) {
-          const cliente = { id: docSnap.id, ...docSnap.data() } as Cliente;
-          setClientes([cliente]);
-          setSelectedCliente(prev => prev ? prev : cliente);
+      getCliente(dbUser.clienteId).then(result => {
+        if (result.error) { console.error("Error fetching cliente:", result.error); return; }
+        if (result.data) {
+          setClientes([result.data]);
+          setSelectedCliente(prev => prev ? prev : result.data!);
         } else {
           setClientes([]);
         }
-      }, (error) => {
-        if (error.message.includes('insufficient permissions')) {
-          handleFirestoreError(error, OperationType.GET, `clientes/${dbUser.clienteId}`);
-        } else {
-          console.error("Firestore Error (clientes):", error);
-        }
       });
-      return unsubscribe;
     } else if (isAdmin) {
-      const q = query(collection(db, 'clientes'), orderBy('nomeFantasia', 'asc'));
-      const unsubscribe = onSnapshot(q, (snapshot) => {
-        const cls = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as Cliente[];
-        setClientes(cls);
-      }, (error) => {
-        if (error.message.includes('insufficient permissions')) {
-          handleFirestoreError(error, OperationType.LIST, 'clientes');
-        } else {
-          console.error("Firestore Error (clientes):", error);
-        }
+      fetchClientes().then(result => {
+        if (result.error) { console.error("Error fetching clientes:", result.error); return; }
+        setClientes(result.data!);
       });
-      return unsubscribe;
     }
-  }, [user, dbUser, isAdmin]);
+  }, [user, dbUser, isAdmin, refreshKey]);
 
   // Fetch assets for selected client
   useEffect(() => {
@@ -1270,60 +1177,29 @@ export default function App() {
       setAtivos([]);
       return;
     }
-    const q = query(
-      collection(db, 'clientes', selectedCliente.id, 'ativos'),
-      orderBy('createdAt', 'desc')
-    );
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const ats = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Ativo[];
-      setAtivos(ats);
-    }, (error) => {
-      if (error.message.includes('insufficient permissions')) {
-        handleFirestoreError(error, OperationType.LIST, `clientes/${selectedCliente.id}/ativos`);
-      } else {
-        console.error("Firestore Error (ativos):", error);
-      }
+    fetchAtivos(selectedCliente.id).then(result => {
+      if (result.error) { console.error("Error fetching ativos:", result.error); return; }
+      setAtivos(result.data!);
     });
-
-    return unsubscribe;
-  }, [user, selectedCliente]);
+  }, [user, selectedCliente, refreshKey]);
 
   // Fetch users (admin only)
   useEffect(() => {
     if (!isAdmin) return;
-    const q = query(collection(db, 'users'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const users = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as DBUser[];
-      setUsersList(users);
-    }, (error) => {
-      console.error("Firestore Error (users):", error);
+    fetchUsers().then(result => {
+      if (result.error) { console.error("Error fetching users:", result.error); return; }
+      setUsersList(result.data!);
     });
-
-    return unsubscribe;
-  }, [isAdmin]);
+  }, [isAdmin, refreshKey]);
 
   // Fetch backups (admin only)
   useEffect(() => {
     if (!isAdmin) return;
-    const q = query(collection(db, 'backups'), orderBy('date', 'desc'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const bks = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Backup[];
-      setBackupsList(bks);
-    }, (error) => {
-      console.error("Firestore Error (backups):", error);
+    fetchBackups().then(result => {
+      if (result.error) { console.error("Error fetching backups:", result.error); return; }
+      setBackupsList(result.data!);
     });
-
-    return unsubscribe;
-  }, [isAdmin]);
+  }, [isAdmin, refreshKey]);
 
   // Auto-backup logic
   useEffect(() => {
@@ -1331,10 +1207,9 @@ export default function App() {
     
     const checkAndBackup = async () => {
       const today = new Date().toISOString().split('T')[0];
-      const backupRef = doc(db, 'backups', today);
-      const snap = await getDoc(backupRef);
+      const { data: existing } = await getBackup(today);
       
-      if (!snap.exists()) {
+      if (!existing) {
         console.log("Iniciando backup diário automático...");
         await performAutoBackup(today);
       }
@@ -1351,22 +1226,19 @@ export default function App() {
       users: []
     };
 
-    // Export Clientes and their Ativos
-    const clientesSnap = await getDocs(collection(db, 'clientes'));
-    for (const clienteDoc of clientesSnap.docs) {
-      const clienteData = { id: clienteDoc.id, ...clienteDoc.data() } as any;
-      const ativosSnap = await getDocs(collection(db, 'clientes', clienteDoc.id, 'ativos'));
-      clienteData.ativos = ativosSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      backupData.clientes.push(clienteData);
+    const { data: cmds } = await fetchCommands();
+    backupData.commands = cmds || [];
+
+    const { data: cls } = await fetchClientes();
+    if (cls) {
+      for (const c of cls) {
+        const { data: ats } = await fetchAtivos(c.id!);
+        backupData.clientes.push({ ...c, ativos: ats || [] });
+      }
     }
 
-    // Export Commands
-    const commandsSnap = await getDocs(collection(db, 'commands'));
-    backupData.commands = commandsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-    // Export Users
-    const usersSnap = await getDocs(collection(db, 'users'));
-    backupData.users = usersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const { data: users } = await fetchUsers();
+    backupData.users = users || [];
 
     return backupData;
   };
@@ -1374,72 +1246,71 @@ export default function App() {
   const performAutoBackup = async (id: string) => {
     try {
       const data = await generateBackupData();
-      await setDoc(doc(db, 'backups', id), {
-        date: serverTimestamp(),
+      await setBackup(id, {
+        id,
         data: JSON.stringify(data),
-        createdBy: 'system'
+        createdBy: 'system',
       });
-
-      // Prune old backups (keep only last 7)
-      const q = query(collection(db, 'backups'), orderBy('date', 'desc'));
-      const snap = await getDocs(q);
-      if (snap.size > 7) {
-        const toDelete = snap.docs.slice(7);
-        for (const d of toDelete) {
-          await deleteDoc(d.ref);
-        }
-      }
+      await pruneBackups(7);
     } catch (error) {
       console.error("Erro no auto-backup:", error);
     }
   };
 
   const restoreFromBackup = async (backup: Backup) => {
-    if (!window.confirm("ATENÇÃO: Restaurar um backup irá SUBSTITUIR todos os dados atuais (Clientes, Ativos, Comandos e Usuários). Esta ação não pode ser desfeita. Deseja continuar?")) {
+    if (!window.confirm("ATENÇÃO: Restaurar um backup irá SUBSTITUIR todos os dados atuais (Clientes, Ativos, Comandos). Esta ação não pode ser desfeita. Deseja continuar?")) {
       return;
     }
 
     setIsRestoring(true);
     try {
       const data = JSON.parse(backup.data);
-      
-      // 1. Clear current data
-      const collectionsToClear = ['commands', 'users', 'clientes'];
-      for (const coll of collectionsToClear) {
-        const snap = await getDocs(collection(db, coll));
-        for (const d of snap.docs) {
-          // If it's a client, clear subcollection 'ativos' first
-          if (coll === 'clientes') {
-            const ativosSnap = await getDocs(collection(db, 'clientes', d.id, 'ativos'));
-            for (const a of ativosSnap.docs) await deleteDoc(a.ref);
-          }
-          await deleteDoc(d.ref);
-        }
-      }
 
-      // 2. Restore data
-      // Restore Commands
-      for (const cmd of data.commands) {
-        const { id, ...rest } = cmd;
-        await setDoc(doc(db, 'commands', id), rest);
-      }
+      // 1. Clear current data (FK order: ativos first, then commands, then clientes)
+      await supabase.from('ativos').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      await supabase.from('commands').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      await supabase.from('clientes').delete().neq('id', '00000000-0000-0000-0000-000000000000');
 
-      // Restore Users
-      for (const u of data.users) {
-        const { id, ...rest } = u;
-        await setDoc(doc(db, 'users', id), rest);
-      }
-
-      // Restore Clientes and Ativos
+      // 2. Restore Clientes
       for (const c of data.clientes) {
-        const { id, ativos, ...rest } = c;
-        await setDoc(doc(db, 'clientes', id), rest);
+        const { id, ativos, uid, createdAt, documentos, infraestrutura, ...rest } = c;
+        const row: Record<string, unknown> = { id };
+        for (const [k, v] of Object.entries(rest)) {
+          row[k.replace(/[A-Z]/g, l => `_${l.toLowerCase()}`)] = v;
+        }
+        row.infraestrutura = infraestrutura || [];
+        row.documentos = documentos || [];
+        row.created_by = uid;
+        row.created_at = createdAt || new Date().toISOString();
+        await supabase.from('clientes').upsert(row);
+
         if (ativos && Array.isArray(ativos)) {
           for (const a of ativos) {
-            const { id: aId, ...aRest } = a;
-            await setDoc(doc(db, 'clientes', id, 'ativos', aId), aRest);
+            const { id: aId, uid: aUid, createdAt: aCreatedAt, clienteId, ...aRest } = a;
+            const aRow: Record<string, unknown> = { id: aId, cliente_id: id };
+            for (const [k, v] of Object.entries(aRest)) {
+              aRow[k.replace(/[A-Z]/g, l => `_${l.toLowerCase()}`)] = v;
+            }
+            aRow.created_by = aUid;
+            aRow.created_at = aCreatedAt || new Date().toISOString();
+            await supabase.from('ativos').upsert(aRow);
           }
         }
+      }
+
+      // 3. Restore Commands
+      for (const cmd of data.commands) {
+        const { id, uid, createdAt, updatedAt, isPremium, linkExterno, ...rest } = cmd;
+        const row: Record<string, unknown> = { id };
+        for (const [k, v] of Object.entries(rest)) {
+          row[k.replace(/[A-Z]/g, l => `_${l.toLowerCase()}`)] = v;
+        }
+        row.is_premium = isPremium || false;
+        row.link_externo = linkExterno || null;
+        row.created_by = uid;
+        row.created_at = createdAt || new Date().toISOString();
+        row.updated_at = updatedAt || new Date().toISOString();
+        await supabase.from('commands').upsert(row);
       }
 
       alert('Restauração concluída com sucesso! A página será recarregada.');
@@ -1463,23 +1334,22 @@ export default function App() {
       if (existingCommands) {
         existingTitles = new Set(existingCommands.map(c => c.titulo));
       } else {
-        const existingSnapshot = await getDocs(collection(db, 'commands'));
-        existingTitles = new Set(existingSnapshot.docs.map(doc => doc.data().titulo));
+        const { data: allCmds } = await fetchCommands();
+        existingTitles = new Set((allCmds || []).map(c => c.titulo));
       }
 
-      for (const cmd of initialCommands) {
-        if (!existingTitles.has(cmd.titulo)) {
-          await addDoc(collection(db, 'commands'), cmd);
-          // Update local set to prevent duplicates if initialCommands has internal duplicates
-          existingTitles.add(cmd.titulo);
-        }
+      const toAdd = initialCommands.filter(cmd => !existingTitles.has(cmd.titulo));
+      if (toAdd.length > 0) {
+        const { error } = await seedCommands(toAdd);
+        if (error) throw new Error(error);
       }
       if (!silent) {
         alert('Base de conhecimento sincronizada!');
       }
     } catch (error) {
       if (!silent) {
-        handleFirestoreError(error, OperationType.WRITE, 'commands');
+        console.error("Error seeding data:", error);
+        alert('Erro ao sincronizar base de conhecimento.');
       }
     } finally {
       isSeedingRef.current = false;
@@ -1489,13 +1359,9 @@ export default function App() {
   const clearDatabase = async () => {
     if (!window.confirm('Tem certeza que deseja limpar toda a base de dados? Esta ação não pode ser desfeita.')) return;
     try {
-      const snapshot = await getDocs(collection(db, 'commands'));
-      const batch = writeBatch(db);
-      snapshot.docs.forEach((doc) => {
-        batch.delete(doc.ref);
-      });
-      await batch.commit();
+      await supabase.from('commands').delete().neq('id', '00000000-0000-0000-0000-000000000000');
       alert('Base de dados limpa com sucesso!');
+      refreshData();
     } catch (error) {
       console.error('Erro ao limpar base de dados:', error);
       alert('Erro ao limpar base de dados.');
@@ -1504,13 +1370,9 @@ export default function App() {
 
   const promoteAllUsersToAdmin = async () => {
     try {
-      const usersSnapshot = await getDocs(collection(db, 'users'));
-      const batch = writeBatch(db);
-      usersSnapshot.forEach((userDoc) => {
-        batch.update(userDoc.ref, { role: 'admin' });
-      });
-      await batch.commit();
+      await supabase.from('user_profiles').update({ role: 'admin' }).neq('role', 'admin');
       alert('Todos os usuários foram promovidos a admin com sucesso!');
+      refreshData();
     } catch (error) {
       console.error('Erro ao promover usuários:', error);
       alert('Erro ao promover usuários.');
@@ -1751,9 +1613,10 @@ export default function App() {
                           onClick={async () => {
                             if (window.confirm(`Tem certeza que deseja excluir o cliente ${c.nomeFantasia}?`)) {
                               try {
-                                await deleteDoc(doc(db, 'clientes', c.id!));
+                                const { error } = await deleteCliente(c.id!);
+                                if (error) throw new Error(error);
+                                refreshData();
                               } catch (error) {
-                                handleFirestoreError(error, OperationType.REMOVE, `clientes/${c.id}`);
                               }
                             }
                           }}
@@ -2226,7 +2089,8 @@ export default function App() {
                                 onEdit={() => setEditingAtivo(ativo)} 
                                 onDelete={async () => {
                                   if (window.confirm('Excluir este acesso?')) {
-                                    await deleteDoc(doc(db, 'clientes', selectedCliente.id!, 'ativos', ativo.id!));
+                                    const { error } = await deleteAtivo(ativo.id!);
+                                    if (!error) refreshData();
                                   }
                                 }} 
                                 onShowHelp={() => setShowSshHelp(true)}
@@ -2923,6 +2787,7 @@ export default function App() {
             <UserForm 
               onClose={() => setIsAddingUser(false)} 
               clientes={clientes}
+              onSave={refreshData}
             />
           )}
           {editingUser && (
@@ -2930,12 +2795,14 @@ export default function App() {
               onClose={() => setEditingUser(null)} 
               initialData={editingUser}
               clientes={clientes}
+              onSave={refreshData}
             />
           )}
           {isAddingCliente && (
             <ClienteForm 
               onClose={() => setIsAddingCliente(false)} 
               user={user!} 
+              onSave={refreshData}
             />
           )}
           {editingCliente && (
@@ -2943,6 +2810,7 @@ export default function App() {
               onClose={() => setEditingCliente(null)} 
               user={user!} 
               initialData={editingCliente}
+              onSave={refreshData}
             />
           )}
           {isAddingAtivo && selectedCliente && (
@@ -2950,6 +2818,7 @@ export default function App() {
               onClose={() => setIsAddingAtivo(false)} 
               user={user!} 
               clienteId={selectedCliente.id!}
+              onSave={refreshData}
             />
           )}
           {editingAtivo && selectedCliente && (
@@ -2958,6 +2827,7 @@ export default function App() {
               user={user!} 
               clienteId={selectedCliente.id!}
               initialData={editingAtivo}
+              onSave={refreshData}
             />
           )}
           {isAdding && (
@@ -2965,6 +2835,7 @@ export default function App() {
               onClose={() => setIsAdding(false)} 
               user={user!} 
               addToast={addToast}
+              onSave={refreshData}
             />
           )}
           {editingCommand && (
@@ -2973,6 +2844,7 @@ export default function App() {
               user={user!} 
               initialData={editingCommand}
               addToast={addToast}
+              onSave={refreshData}
             />
           )}
           {selectedCommand && (
@@ -3002,7 +2874,7 @@ export default function App() {
   );
 }
 
-function ClienteForm({ onClose, user, initialData }: { onClose: () => void, user: any, initialData?: Cliente }) {
+function ClienteForm({ onClose, user, initialData, onSave }: { onClose: () => void, user: any, initialData?: Cliente, onSave?: () => void }) {
   const [formData, setFormData] = useState({
     nomeFantasia: initialData?.nomeFantasia || '',
     razaoSocial: initialData?.razaoSocial || '',
@@ -3094,17 +2966,21 @@ function ClienteForm({ onClose, user, initialData }: { onClose: () => void, user
           row.asn.trim() !== '' || row.ipv4.trim() !== '' || row.ipv6.trim() !== ''
         ),
         uid: user.id,
-        createdAt: initialData?.createdAt || serverTimestamp(),
+        createdAt: initialData?.createdAt || new Date().toISOString(),
       };
 
       if (initialData?.id) {
-        await updateDoc(doc(db, 'clientes', initialData.id), clienteData);
+        const { error } = await updateCliente(initialData.id, clienteData);
+        if (error) throw new Error(error);
       } else {
-        await addDoc(collection(db, 'clientes'), clienteData);
+        const { error } = await addCliente(clienteData);
+        if (error) throw new Error(error);
       }
+      onSave?.();
       onClose();
     } catch (error) {
-      handleFirestoreError(error, initialData?.id ? OperationType.UPDATE : OperationType.CREATE, initialData?.id ? `clientes/${initialData.id}` : 'clientes');
+      console.error("Error saving cliente:", error);
+      alert('Erro ao salvar cliente.');
     } finally {
       setIsSubmitting(false);
     }
@@ -3454,7 +3330,7 @@ function ClienteForm({ onClose, user, initialData }: { onClose: () => void, user
   );
 }
 
-function AtivoForm({ onClose, user, clienteId, initialData }: { onClose: () => void, user: any, clienteId: string, initialData?: Ativo }) {
+function AtivoForm({ onClose, user, clienteId, initialData, onSave }: { onClose: () => void, user: any, clienteId: string, initialData?: Ativo, onSave?: () => void }) {
   const [formData, setFormData] = useState({
     categoriaAcesso: initialData?.categoriaAcesso || 'Servers',
     nome: initialData?.nome || '',
@@ -3521,17 +3397,21 @@ function AtivoForm({ onClose, user, clienteId, initialData }: { onClose: () => v
         clienteId,
         uid: user.id,
         tags: initialData?.tags || [],
-        createdAt: initialData?.createdAt || serverTimestamp(),
+        createdAt: initialData?.createdAt || new Date().toISOString(),
       };
 
       if (initialData?.id) {
-        await updateDoc(doc(db, 'clientes', clienteId, 'ativos', initialData.id), ativoData);
+        const { error } = await updateAtivo(initialData.id, ativoData);
+        if (error) throw new Error(error);
       } else {
-        await addDoc(collection(db, 'clientes', clienteId, 'ativos'), ativoData);
+        const { error } = await addAtivo(ativoData);
+        if (error) throw new Error(error);
       }
+      onSave?.();
       onClose();
     } catch (error) {
-      handleFirestoreError(error, initialData?.id ? OperationType.UPDATE : OperationType.CREATE, initialData?.id ? `clientes/${clienteId}/ativos/${initialData.id}` : `clientes/${clienteId}/ativos`);
+      console.error("Error saving ativo:", error);
+      alert('Erro ao salvar acesso.');
     } finally {
       setIsSubmitting(false);
     }
@@ -4123,7 +4003,7 @@ function AtivoForm({ onClose, user, clienteId, initialData }: { onClose: () => v
   );
 }
 
-function UserForm({ onClose, initialData, clientes }: { onClose: () => void, initialData?: DBUser, clientes: Cliente[] }) {
+function UserForm({ onClose, initialData, clientes, onSave }: { onClose: () => void, initialData?: DBUser, clientes: Cliente[], onSave?: () => void }) {
   const [formData, setFormData] = useState({
     email: initialData?.email || '',
     password: '',
@@ -4137,48 +4017,21 @@ function UserForm({ onClose, initialData, clientes }: { onClose: () => void, ini
     setIsSubmitting(true);
     try {
       if (initialData) {
-        // Edit existing user
-        const userRef = doc(db, 'users', initialData.uid);
-        const updateData: any = { role: formData.role };
-        if (formData.role === 'cliente') {
-          updateData.clienteId = formData.clienteId;
-        } else {
-          updateData.clienteId = deleteField();
-        }
-        await updateDoc(userRef, updateData);
+        const { error } = await updateUserRole(initialData.uid, formData.role, formData.role === 'cliente' ? formData.clienteId : undefined);
+        if (error) throw new Error(error);
       } else {
-        // Create new user via Supabase
         const { data, error: signUpError } = await supabase.auth.signUp({
           email: formData.email,
           password: formData.password,
         });
         if (signUpError) throw signUpError;
         if (!data.user) throw new Error('Falha ao criar usuário');
-        
-        // Create Firestore document for backward compat
-        const userDocData: any = {
-          uid: data.user.id,
-          email: formData.email,
-          role: formData.role,
-          createdAt: serverTimestamp()
-        };
-        
-        if (formData.role === 'cliente') {
-          userDocData.clienteId = formData.clienteId;
-        }
-        
-        await setDoc(doc(db, 'users', data.user.id), userDocData);
       }
+      onSave?.();
       onClose();
     } catch (error: any) {
       console.error("User registration/update error:", error);
-      if (error.code === 'auth/operation-not-allowed') {
-        alert("ERRO: O provedor de 'E-mail/Senha' não está ativado no seu Console do Firebase. \n\nPara corrigir:\n1. Vá ao Console do Firebase\n2. Authentication > Sign-in method\n3. Ative 'Email/Password'");
-      } else if (error.code === 'permission-denied' || (error instanceof Error && error.message.includes('permissions'))) {
-        handleFirestoreError(error, initialData ? OperationType.UPDATE : OperationType.WRITE, initialData ? `users/${initialData.uid}` : 'users');
-      } else {
-        alert("Erro ao processar usuário: " + error.message);
-      }
+      alert("Erro ao processar usuário: " + error.message);
     } finally {
       setIsSubmitting(false);
     }
@@ -4319,7 +4172,7 @@ function UserForm({ onClose, initialData, clientes }: { onClose: () => void, ini
   );
 }
 
-function CommandForm({ onClose, user, initialData, addToast }: { onClose: () => void, user: any, initialData?: Command, addToast: (msg: string, type?: 'success' | 'error') => void }) {
+function CommandForm({ onClose, user, initialData, addToast, onSave }: { onClose: () => void, user: any, initialData?: Command, addToast: (msg: string, type?: 'success' | 'error') => void, onSave?: () => void }) {
   const [formData, setFormData] = useState({
     titulo: initialData?.titulo || '',
     descricao: initialData?.descricao || '',
@@ -4361,24 +4214,25 @@ function CommandForm({ onClose, user, initialData, addToast }: { onClose: () => 
       const data = {
         ...formData,
         tags: formData.tags.split(',').map(t => t.trim()).filter(t => t),
-        updatedAt: serverTimestamp()
+        uid: user.id,
+        updatedAt: new Date().toISOString(),
+        createdAt: initialData?.createdAt || new Date().toISOString(),
       };
 
       if (initialData?.id) {
-        await updateDoc(doc(db, 'commands', initialData.id), data);
+        const { error } = await updateCommand(initialData.id, data);
+        if (error) throw new Error(error);
         addToast('Comando atualizado com sucesso!');
       } else {
-        await addDoc(collection(db, 'commands'), {
-          ...data,
-          uid: user.id,
-          createdAt: serverTimestamp()
-        });
+        const { error } = await addCommand(data);
+        if (error) throw new Error(error);
         addToast('Novo comando adicionado com sucesso!');
       }
+      onSave?.();
       onClose();
     } catch (error) {
       addToast('Erro ao salvar comando.', 'error');
-      handleFirestoreError(error, initialData ? OperationType.UPDATE : OperationType.CREATE, 'commands');
+      console.error(error);
     } finally {
       setIsSubmitting(false);
     }
@@ -4591,13 +4445,14 @@ function CommandDetails({ command, commands, isAdmin, setSelectedCommand, onClos
     setIsDeleting(true);
     try {
       if (command.id) {
-        await deleteDoc(doc(db, 'commands', command.id));
+        const { error } = await deleteCommand(command.id);
+        if (error) throw new Error(error);
         addToast('Comando excluído com sucesso!');
         onClose();
       }
     } catch (error) {
       addToast('Erro ao excluir comando.', 'error');
-      handleFirestoreError(error, OperationType.REMOVE, `commands/${command.id}`);
+      console.error(error);
     } finally {
       setIsDeleting(false);
       setShowDeleteConfirm(false);

@@ -1,9 +1,8 @@
-import { serverTimestamp, FieldValue } from 'firebase/firestore';
 import { Command, Fabricante } from '../types';
 
 export interface InitialCommand extends Omit<Command, 'id' | 'createdAt' | 'updatedAt'> {
-  createdAt: FieldValue;
-  updatedAt: FieldValue;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export const getInitialCommands = (uid: string): InitialCommand[] => [
@@ -29,8 +28,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     categoria: "Sistema",
     tags: ["network", "ping", "traceroute", "troubleshooting"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Comandos de Rede Windows",
@@ -54,8 +53,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     categoria: "Sistema",
     tags: ["windows", "network", "ipconfig", "dns"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Comandos Essenciais Docker",
@@ -87,8 +86,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     categoria: "Containers",
     tags: ["docker", "containers", "devops"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Administração de Sistema Linux",
@@ -120,8 +119,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     categoria: "Admin",
     tags: ["linux", "admin", "sysadmin", "troubleshooting"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Login e Gerência Inicial (DmOS)",
@@ -143,8 +142,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     isPremium: true,
     tags: ["datacom", "login", "management", "mgmt"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Monitoramento de Recursos (DmOS)",
@@ -169,8 +168,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     subgrupo: "Sistema",
     tags: ["datacom", "cpu", "memory", "uptime"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Configuração de SNTP (DmOS)",
@@ -187,8 +186,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     subgrupo: "Gerenciamento",
     tags: ["datacom", "sntp", "time", "sync"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Configuração de Syslog Remoto (DmOS)",
@@ -205,8 +204,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     subgrupo: "Gerenciamento",
     tags: ["datacom", "syslog", "logging", "remote"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Habilitar LLDP (DmOS)",
@@ -223,8 +222,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     subgrupo: "Sistema",
     tags: ["datacom", "lldp", "discovery", "network"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Controle Administrativo de Interface (DmOS)",
@@ -245,8 +244,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     subgrupo: "Interfaces",
     tags: ["datacom", "interface", "shutdown", "admin"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Balanceamento de Carga Dinâmico em LAG (DmOS)",
@@ -263,8 +262,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     subgrupo: "Switching",
     tags: ["datacom", "lag", "load-balance", "dynamic"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Método de Autenticação de ONU (GPON DmOS)",
@@ -281,8 +280,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     subgrupo: "GPON",
     tags: ["datacom", "gpon", "onu", "auth"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Carregar Perfis GPON Padrão (DmOS)",
@@ -299,8 +298,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     subgrupo: "GPON",
     tags: ["datacom", "gpon", "profiles", "default"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Roteamento Estático IPv6 (DmOS)",
@@ -317,8 +316,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     subgrupo: "Roteamento",
     tags: ["datacom", "routing", "ipv6", "static"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "OSPF Ponto-a-Ponto (DmOS)",
@@ -335,8 +334,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     subgrupo: "Roteamento",
     tags: ["datacom", "ospf", "routing", "dynamic"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Sessão eBGP IPv4 (DmOS)",
@@ -353,8 +352,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     subgrupo: "Roteamento",
     tags: ["datacom", "bgp", "routing", "ebgp"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Configuração de Interface L3 (DmOS)",
@@ -371,8 +370,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     subgrupo: "Interfaces",
     tags: ["datacom", "l3", "ip", "interface"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Configuração de DHCP Relay (DmOS)",
@@ -389,8 +388,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     subgrupo: "Gerenciamento",
     tags: ["datacom", "dhcp", "relay", "management"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Visualizar Tabela ARP (DmOS)",
@@ -407,8 +406,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     subgrupo: "Sistema",
     tags: ["datacom", "arp", "troubleshooting", "ip"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Configuração de Banner MOTD (DmOS)",
@@ -425,8 +424,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     subgrupo: "Gerenciamento",
     tags: ["datacom", "banner", "motd", "security"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Tempo de Aging da Tabela MAC (DmOS)",
@@ -443,8 +442,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     subgrupo: "Switching",
     tags: ["datacom", "mac", "switching", "aging"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Configuração de Backup-Link (DmOS)",
@@ -461,8 +460,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     subgrupo: "Switching",
     tags: ["datacom", "redundancy", "backup-link", "switching"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Informações do Sistema (DmOS)",
@@ -487,8 +486,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     subgrupo: "Sistema",
     tags: ["datacom", "dmos", "system", "inventory"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Configuração de VLAN (DmOS)",
@@ -509,8 +508,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     subgrupo: "Switching",
     tags: ["datacom", "vlan", "switching", "dmos"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Roteamento Estático IPv4 (DmOS)",
@@ -527,8 +526,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     subgrupo: "Roteamento",
     tags: ["datacom", "routing", "static", "ipv4"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Provisionamento de ONU (GPON DmOS)",
@@ -549,8 +548,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     subgrupo: "GPON",
     tags: ["datacom", "gpon", "olt", "onu", "provisioning"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Gerenciamento de Configuração (Commit/Rollback)",
@@ -575,8 +574,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     subgrupo: "Gerenciamento",
     tags: ["datacom", "config", "commit", "rollback"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Configurar ACL (Cisco)",
@@ -596,8 +595,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     categoria: "Security",
     tags: ["cisco", "acl", "security", "firewall"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Configuração de LACP (Link Aggregation)",
@@ -614,8 +613,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     subgrupo: "Switching",
     tags: ["datacom", "lacp", "lag", "etherchannel"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Atualização de Software (DmOS)",
@@ -636,8 +635,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     subgrupo: "Gerenciamento",
     tags: ["datacom", "firmware", "update", "upgrade"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Configuração de SNMPv2 (DmOS)",
@@ -654,8 +653,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     subgrupo: "Gerenciamento",
     tags: ["datacom", "snmp", "management", "monitoring"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Monitoramento de Interfaces (DmOS)",
@@ -680,8 +679,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     subgrupo: "Interfaces",
     tags: ["datacom", "interface", "sfp", "monitoring"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Troubleshooting de Rede (DmOS)",
@@ -706,8 +705,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     subgrupo: "Sistema",
     tags: ["datacom", "troubleshooting", "lldp", "mac", "logs"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Verificar Placas (Huawei OLT)",
@@ -722,8 +721,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     subgrupo: "Hardware",
     tags: ["huawei", "olt", "board", "troubleshooting"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Criar VLAN (Huawei)",
@@ -738,8 +737,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     subgrupo: "VLAN",
     tags: ["vlan", "switching"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Criar VLAN (Cisco)",
@@ -753,8 +752,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     categoria: "VLAN",
     tags: ["vlan", "switching"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Ver tabela de rotas (Linux)",
@@ -768,8 +767,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     categoria: "Routing",
     tags: ["routing", "network"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Visualizar Logs do Sistema (journalctl)",
@@ -783,8 +782,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     categoria: "Sistema",
     tags: ["linux", "logs", "systemd", "troubleshooting"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Ver vizinhos BGP (Huawei)",
@@ -798,8 +797,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     categoria: "ROUTER",
     tags: ["bgp", "routing"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Ver interfaces IP (Cisco)",
@@ -813,8 +812,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     categoria: "Interface",
     tags: ["cisco", "interface", "ip"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Descrição de Interfaces IP (Huawei)",
@@ -828,8 +827,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     categoria: "ROUTER",
     tags: ["huawei", "interface", "troubleshooting"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Configuração Completa da Porta (Huawei)",
@@ -843,8 +842,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     categoria: "SWITCH",
     tags: ["huawei", "config", "troubleshooting"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "TROUBLESHOOT OSPF (Huawei)",
@@ -868,8 +867,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     categoria: "ROUTER",
     tags: ["huawei", "ospf", "routing", "troubleshooting"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Informações de Peer VSI (Huawei)",
@@ -883,8 +882,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     categoria: "ROUTER",
     tags: ["huawei", "mpls", "vsi", "l2vpn", "troubleshooting"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Sessões MPLS LDP (Huawei)",
@@ -898,8 +897,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     categoria: "ROUTER",
     tags: ["huawei", "mpls", "ldp", "troubleshooting"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Adjacências MPLS LDP (Huawei)",
@@ -913,8 +912,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     categoria: "ROUTER",
     tags: ["huawei", "mpls", "ldp", "troubleshooting"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Resumo de MPLS L2VC (Huawei)",
@@ -928,8 +927,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     categoria: "ROUTER",
     tags: ["huawei", "mpls", "l2vc", "troubleshooting"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Detalhes de MPLS L2VC por ID (Huawei)",
@@ -943,8 +942,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     categoria: "ROUTER",
     tags: ["huawei", "mpls", "l2vc", "troubleshooting"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Vizinhos LLDP em Interface (Huawei)",
@@ -958,8 +957,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     categoria: "SWITCH",
     tags: ["huawei", "lldp", "troubleshooting"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Detalhes BGP Peer (Huawei)",
@@ -973,8 +972,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     categoria: "ROUTER",
     tags: ["bgp", "huawei", "routing"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Informações de ONT (Huawei OLT)",
@@ -988,8 +987,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     categoria: "OLT",
     tags: ["huawei", "olt", "ont"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Verificar Placas (ZTE C3XX)",
@@ -1003,8 +1002,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     categoria: "LINHA C3XX",
     tags: ["zte", "c3xx", "hardware"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Verificar ONT por SN (ZTE C3XX)",
@@ -1018,8 +1017,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     categoria: "LINHA C3XX",
     tags: ["zte", "c3xx", "ont"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Verificar Placas (ZTE TITAN C6XX)",
@@ -1033,8 +1032,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     categoria: "LINHA TITAN C6XX",
     tags: ["zte", "titan", "c6xx", "hardware"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Status de ONT (ZTE TITAN C6XX)",
@@ -1048,8 +1047,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     categoria: "LINHA TITAN C6XX",
     tags: ["zte", "titan", "c6xx", "ont"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Resumo de Interfaces (ZTE Switch)",
@@ -1063,8 +1062,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     categoria: "SWITCH",
     tags: ["zte", "switch", "interface"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Tabela de Rotas (ZTE Router)",
@@ -1078,8 +1077,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     categoria: "ROUTER",
     tags: ["zte", "router", "routing"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Gerenciamento de Usuários (DmOS)",
@@ -1100,8 +1099,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     subgrupo: "Gerenciamento",
     tags: ["datacom", "user", "password", "security"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Acesso Remoto SSH/Telnet (DmOS)",
@@ -1122,8 +1121,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     subgrupo: "Gerenciamento",
     tags: ["datacom", "ssh", "telnet", "management"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Configuração de MTU (DmOS)",
@@ -1140,8 +1139,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     subgrupo: "Interfaces",
     tags: ["datacom", "mtu", "interface", "jumbo"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Spanning Tree Protocol (DmOS)",
@@ -1162,8 +1161,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     subgrupo: "Switching",
     tags: ["datacom", "stp", "rstp", "loop"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Configuração de VRF (DmOS)",
@@ -1180,8 +1179,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     subgrupo: "Roteamento",
     tags: ["datacom", "vrf", "routing", "mpls"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Status Óptico de ONU (DmOS)",
@@ -1198,8 +1197,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     subgrupo: "GPON",
     tags: ["datacom", "gpon", "optical", "power", "onu"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Salvar e Reiniciar (DmOS)",
@@ -1220,8 +1219,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     subgrupo: "Sistema",
     tags: ["datacom", "save", "reboot", "config"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "L2 Protocol Tunneling (DmOS)",
@@ -1238,8 +1237,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     subgrupo: "Switching",
     tags: ["datacom", "l2pt", "tunneling", "metro-ethernet"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Rota Estática com Track (DmOS)",
@@ -1256,8 +1255,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     subgrupo: "Roteamento",
     tags: ["datacom", "routing", "track", "sla", "redundancy"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Atualização de Firmware de ONU (DmOS)",
@@ -1274,8 +1273,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     subgrupo: "GPON",
     tags: ["datacom", "gpon", "onu", "update", "firmware"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Informações Detalhadas de Hardware (DmOS)",
@@ -1292,8 +1291,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     subgrupo: "Sistema",
     tags: ["datacom", "hardware", "environment", "temperature", "fan"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Troubleshooting OSPF Avançado (Cisco)",
@@ -1317,8 +1316,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     categoria: "Routing",
     tags: ["cisco", "ospf", "routing", "troubleshooting"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Troubleshooting BGP Avançado (Cisco)",
@@ -1342,8 +1341,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     categoria: "Routing",
     tags: ["cisco", "bgp", "routing", "troubleshooting"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Comandos Essenciais Junos (Juniper)",
@@ -1371,8 +1370,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     categoria: "Sistema",
     tags: ["juniper", "junos", "system", "basics"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Troubleshooting OSPF/BGP no Junos (Juniper)",
@@ -1396,8 +1395,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     categoria: "Routing",
     tags: ["juniper", "ospf", "bgp", "routing", "troubleshooting"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Comandos de Operação Arista (EOS)",
@@ -1425,8 +1424,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     categoria: "Switching",
     tags: ["arista", "eos", "switching", "mlag"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Troubleshooting de VXLAN (Arista)",
@@ -1446,8 +1445,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     categoria: "Switching",
     tags: ["arista", "vxlan", "datacenter", "troubleshooting"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Captura de Pacotes Avançada (Cisco)",
@@ -1471,8 +1470,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     categoria: "Sistema",
     tags: ["cisco", "packet-capture", "epc", "troubleshooting"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Análise de Performance e CPU",
@@ -1496,8 +1495,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     categoria: "Sistema",
     tags: ["performance", "cpu", "troubleshooting", "monitoring"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Diagnóstico Completo (Huawei)",
@@ -1513,8 +1512,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     categoria: "Sistema",
     tags: ["huawei", "diagnostic", "troubleshooting", "support"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Monitoramento de Alarmes (Huawei)",
@@ -1534,8 +1533,8 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     categoria: "Sistema",
     tags: ["huawei", "alarm", "trap", "monitoring"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     titulo: "Troubleshooting Avançado (ZTE)",
@@ -1559,7 +1558,7 @@ export const getInitialCommands = (uid: string): InitialCommand[] => [
     categoria: "Sistema",
     tags: ["zte", "troubleshooting", "alarm", "logs"],
     uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   }
 ];
