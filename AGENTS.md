@@ -5,7 +5,7 @@
 - **Runtime:** React 19 + Vite 6 + TypeScript 5.8
 - **Styling:** Tailwind CSS v4 (via `@tailwindcss/vite` plugin, no config file)
 - **Database:** Firestore (real-time via `onSnapshot`)
-- **Auth:** Firebase Auth (Google popup + Email/Password)
+- **Auth:** Supabase Auth (Google OAuth + Email/Password)
 - **Hosting:** Docker → nginx (port 3000)
 
 ## Commands
@@ -13,17 +13,22 @@
 ```sh
 npm run dev      # Dev server on port 3000
 npm run build    # Production build to dist/
+npm run preview  # Preview production build
 npm run lint     # TypeScript type check only (tsc --noEmit)
 npm run clean    # Unix-only (rm -rf dist) — fails on Windows CMD/PowerShell
 ```
 
 No test framework configured.
 
+`.env` requires `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` (see `.env.homolog`). The stock `.env.example` is AI Studio boilerplate — do not rely on it.
+
 ## Architecture
 
-- **Monolithic SPA:** All logic in `src/App.tsx` (~5000 lines). Only extracted component: `src/components/RichTextEditor.tsx` (TipTap).
+- **Monolithic SPA:** All logic in `src/App.tsx` (~4750 lines). Only extracted component: `src/components/RichTextEditor.tsx` (TipTap).
 - **Entrypoint:** `src/main.tsx` → `App.tsx`
-- **Firebase init:** `src/firebase.ts` (exports `db`, `auth`, consumes `firebase-applet-config.json`)
+- **Hybrid backend:** Supabase Auth (Google OAuth + Email/Password) for login + user_profiles; Firebase Firestore for all CRUD data. Roles sync to both `supabase.user_profiles` and `firebase.users/{uid}`.
+- **Firebase init:** `src/firebase.ts` (exports `db`, `auth`, consumes `firebase-applet-config.json`). Firebase `auth` is exported but unused in App.tsx.
+- **Supabase init:** `src/supabase.ts` (exports `supabase` client, reads `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY` from `.env`)
 - **Static data:** `src/data/constants.ts` — 23 manufacturer names/details/logos, 27 categories, Redes/Server groups
 - **Seed commands:** `src/data/initialCommands.ts` (~50 commands, auto-seeded to Firestore on first admin login)
 - **Types:** `src/types.ts` — `Command`, `Cliente`, `Ativo`, `DBUser`, `Backup`, `Fabricante` (union)
@@ -49,6 +54,7 @@ No test framework configured.
 - No pagination — all collections are fetched entirely via `onSnapshot`.
 - Backup/restore replaces ALL data (no granular restore).
 - HMR is conditionally disabled via `DISABLE_HMR` env var (see `vite.config.ts`).
+- `GEMINI_API_KEY` injected into client bundle via Vite `define` (read from `.env` at build time via `loadEnv`).
 
 ## Keyboard Shortcuts (App.tsx)
 
@@ -79,9 +85,9 @@ No test framework configured.
 - `migrations/` — SQL schemas + RLS policies for planned Firebase→Supabase migration.
 - `firebase-blueprint.json` — Data model reference (Firestore schema definitions).
 
-## Supabase Migration (NOT LIVE)
+## Supabase Migration (PARTIAL)
 
-The live system uses Firebase exclusively. `migrations/` and `supabase/` contain schemas, RLS policies, and config for a planned migration that has **not been executed**. The migration script (`migrate-firestore-to-supabase.js`) is available but the frontend has no Supabase client code.
+Auth is live on Supabase. `migrations/` and `supabase/` contain schemas, RLS policies, and config for migrating the remaining data (Firestore → Supabase) which has **not been executed**. The migration script (`migrate-firestore-to-supabase.js`) is available but the frontend still reads/writes all data via Firestore.
 
 ## UI Language
 

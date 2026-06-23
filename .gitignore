@@ -14,6 +14,7 @@ coverage/
 
 backup/
 .env
+EASYPANEL_DEPLOY.md
 service-account.json
 gen-lang-client-*.json
 *_test_*.mjs
