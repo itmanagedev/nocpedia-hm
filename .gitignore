@@ -6,3 +6,15 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Specs e workflow locais (apenas workspace)
+.specs/
+.features/
+.bugfixes/
+
+backup/
+.env
+service-account.json
+gen-lang-client-*.json
+*_test_*.mjs
+*.sh

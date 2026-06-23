@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo, useRef, useDeferredValue } from 'react';
-import { initializeApp, deleteApp } from 'firebase/app';
 import { 
   Search, 
   Plus, 
@@ -80,18 +79,8 @@ import {
   writeBatch,
   deleteField
 } from 'firebase/firestore';
-import { 
-  signInWithPopup, 
-  GoogleAuthProvider, 
-  onAuthStateChanged, 
-  signOut,
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  getAuth,
-  User
-} from 'firebase/auth';
-import { db, auth } from './firebase';
-import firebaseConfig from '../firebase-applet-config.json';
+import { db } from './firebase';
+import { supabase } from './supabase';
 import { Command, Fabricante, Cliente, Ativo, DBUser, Backup } from './types';
 import { getInitialCommands } from './data/initialCommands';
 import Markdown from 'react-markdown';
@@ -122,39 +111,32 @@ interface FirestoreErrorInfo {
   authInfo: {
     userId: string | undefined;
     email: string | null | undefined;
-    emailVerified: boolean | undefined;
-    isAnonymous: boolean | undefined;
-    tenantId: string | null | undefined;
-    providerInfo: {
-      providerId: string;
-      displayName: string | null;
-      email: string | null;
-      photoUrl: string | null;
-    }[];
+  }
+}
+
+async function getCurrentUserId() {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    return session?.user;
+  } catch {
+    return null;
   }
 }
 
 function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
-  const errInfo: FirestoreErrorInfo = {
-    error: error instanceof Error ? error.message : String(error),
-    authInfo: {
-      userId: auth.currentUser?.uid,
-      email: auth.currentUser?.email,
-      emailVerified: auth.currentUser?.emailVerified,
-      isAnonymous: auth.currentUser?.isAnonymous,
-      tenantId: auth.currentUser?.tenantId,
-      providerInfo: auth.currentUser?.providerData.map(provider => ({
-        providerId: provider.providerId,
-        displayName: provider.displayName,
-        email: provider.email,
-        photoUrl: provider.photoURL
-      })) || []
-    },
-    operationType,
-    path
-  }
-  console.error('Firestore Error: ', JSON.stringify(errInfo));
-  throw new Error(JSON.stringify(errInfo));
+  getCurrentUserId().then(currentUser => {
+    const errInfo: FirestoreErrorInfo = {
+      error: error instanceof Error ? error.message : String(error),
+      authInfo: {
+        userId: currentUser?.id,
+        email: currentUser?.email,
+      },
+      operationType,
+      path
+    }
+    console.error('Firestore Error: ', JSON.stringify(errInfo));
+  });
+  throw new Error(error instanceof Error ? error.message : String(error));
 }
 
 export class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean, error: any }> {
@@ -983,7 +965,7 @@ const AtivoCard = ({ ativo, dbUser, onEdit, onDelete, onShowHelp }: { ativo: Ati
 };
 
 export default function App() {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<any | null>(null);
   const [dbUser, setDbUser] = useState<DBUser | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const isSeedingRef = useRef(false);
@@ -1155,58 +1137,59 @@ export default function App() {
 
   // Auth state
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      console.log("Auth state changed, user:", user?.email);
-      setUser(user);
-      if (user) {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      const su = session?.user ?? null;
+      console.log("Auth state changed:", event, su?.email);
+      setUser(su);
+      if (su) {
         try {
           // Test connection
           await getDocFromServer(doc(db, 'test', 'connection')).catch(() => {});
 
-          // Check if user is admin (default admin or from DB)
-          const userDocRef = doc(db, 'users', user.uid);
-          const userSnap = await getDoc(userDocRef);
-          
-          const isDefaultAdmin = user.email === 'noc.itmanage@gmail.com';
-          const hasAdminRole = userSnap.exists() && userSnap.data().role === 'admin';
-          
-          console.log("Debug Admin:", { email: user.email, isDefaultAdmin, hasAdminRole, userSnapExists: userSnap.exists(), currentRole: userSnap.data()?.role });
+          // Read role from Supabase user_profiles
+          const { data: profile } = await supabase
+            .from('user_profiles')
+            .select('*')
+            .eq('id', su.id)
+            .single();
 
-          setIsAdmin(isDefaultAdmin || hasAdminRole);
+          const isDefaultAdmin = su.email === 'noc.itmanage@gmail.com';
 
-          // Ensure user doc exists with correct ID and role
-          if (!userSnap.exists()) {
-            const newDbUser = {
-              uid: user.uid,
-              email: user.email,
-              role: isDefaultAdmin ? 'admin' : 'viewer'
-            };
-            await setDoc(userDocRef, newDbUser);
-            setDbUser(newDbUser as DBUser);
+          if (!profile) {
+            // Auto-create profile in Supabase
+            const role = isDefaultAdmin ? 'admin' : 'viewer';
+            await supabase.from('user_profiles').insert({
+              id: su.id,
+              email: su.email,
+              role,
+              firebase_uid: su.id,
+            });
+            setIsAdmin(isDefaultAdmin);
+            setDbUser({ uid: su.id, email: su.email!, role, id: su.id } as DBUser);
+
+            // Also create Firestore doc for backward compat
+            await setDoc(doc(db, 'users', su.id), { uid: su.id, email: su.email, role }).catch(() => {});
           } else {
-            if (isDefaultAdmin && userSnap.data().role !== 'admin') {
-              // Force update if it's the default admin but role is not admin
-              await updateDoc(userDocRef, { role: 'admin' });
+            if (isDefaultAdmin && profile.role !== 'admin') {
+              await supabase.from('user_profiles').update({ role: 'admin' }).eq('id', su.id);
               setIsAdmin(true);
-              console.log("Admin role forced updated.");
-              setDbUser({ ...userSnap.data(), role: 'admin' } as DBUser);
+              setDbUser({ ...profile, role: 'admin', uid: su.id } as unknown as DBUser);
             } else {
-              setDbUser(userSnap.data() as DBUser);
+              setIsAdmin(profile.role === 'admin');
+              setDbUser({ ...profile, uid: su.id } as unknown as DBUser);
             }
           }
         } catch (error) {
-          if (error instanceof Error && error.message.includes('offline')) {
-            console.warn("Auth initialization warning: Firestore is currently offline. Retrying may be necessary.");
-          } else {
-            console.error("Auth initialization error:", error);
-          }
+          console.error("Auth initialization error:", error);
         }
       } else {
         setIsAdmin(false);
+        setDbUser(null);
       }
       setLoading(false);
     });
-    return unsubscribe;
+
+    return () => subscription?.unsubscribe();
   }, []);
 
   // Fetch commands
@@ -1227,7 +1210,7 @@ export default function App() {
         
         // If major new manufacturers are missing, trigger sync
         if (cmds.length > 0 && (!hasDatacom || !hasLinux || !hasDocker)) {
-          seedInitialData(user.uid, true, cmds); // pass current cmds
+          seedInitialData(user.id, true, cmds); // pass current cmds
         }
       }
     }, (error) => {
@@ -1552,16 +1535,11 @@ export default function App() {
   const handleLogin = async () => {
     if (isLoggingIn) return;
     setIsLoggingIn(true);
-    const provider = new GoogleAuthProvider();
     try {
-      await signInWithPopup(auth, provider);
+      await supabase.auth.signInWithOAuth({ provider: 'google' });
     } catch (error: any) {
-      if (error.code === 'auth/cancelled-popup-request' || error.code === 'auth/popup-closed-by-user') {
-        console.log("Login cancelado pelo usuário.");
-      } else {
-        console.error("Login error:", error);
-        alert("Erro ao fazer login com Google: " + error.message);
-      }
+      console.error("Login error:", error);
+      alert("Erro ao fazer login com Google: " + error.message);
     } finally {
       setIsLoggingIn(false);
     }
@@ -1571,7 +1549,7 @@ export default function App() {
     if (isLoggingIn) return;
     setIsLoggingIn(true);
     try {
-      await signInWithEmailAndPassword(auth, email, pass);
+      await supabase.auth.signInWithPassword({ email, password: pass });
     } catch (error: any) {
       console.error("Email login error:", error);
       alert("Erro ao fazer login: " + error.message);
@@ -1584,7 +1562,7 @@ export default function App() {
     if (isLoggingIn) return;
     setIsLoggingIn(true);
     try {
-      await createUserWithEmailAndPassword(auth, email, pass);
+      await supabase.auth.signUp({ email, password: pass });
     } catch (error: any) {
       console.error("Email signup error:", error);
       alert("Erro ao criar conta: " + error.message);
@@ -1593,7 +1571,9 @@ export default function App() {
     }
   };
 
-  const handleLogout = () => signOut(auth);
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+  };
 
   const exportDatabase = async () => {
     try {
@@ -2546,9 +2526,9 @@ export default function App() {
               {user ? (
                 <>
                   <div className="flex items-center gap-3 px-3 py-3 rounded-xl bg-zinc-800/50 mb-3">
-                    <img src={user.photoURL || ''} alt={user.displayName || ''} className="w-8 h-8 rounded-full border border-zinc-700" />
+                    <img src={user.user_metadata?.avatar_url || ''} alt={user.user_metadata?.full_name || ''} className="w-8 h-8 rounded-full border border-zinc-700" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{user.displayName}</p>
+                      <p className="text-sm font-medium truncate">{user.user_metadata?.full_name || user.email}</p>
                       <p className="text-xs text-zinc-500 truncate">{dbUser?.role === 'admin' ? 'Admin' : dbUser?.role === 'cliente' ? 'Cliente' : 'Viewer'}</p>
                     </div>
                   </div>
@@ -3022,7 +3002,7 @@ export default function App() {
   );
 }
 
-function ClienteForm({ onClose, user, initialData }: { onClose: () => void, user: User, initialData?: Cliente }) {
+function ClienteForm({ onClose, user, initialData }: { onClose: () => void, user: any, initialData?: Cliente }) {
   const [formData, setFormData] = useState({
     nomeFantasia: initialData?.nomeFantasia || '',
     razaoSocial: initialData?.razaoSocial || '',
@@ -3113,7 +3093,7 @@ function ClienteForm({ onClose, user, initialData }: { onClose: () => void, user
         infraestrutura: formData.infraestrutura.filter(row => 
           row.asn.trim() !== '' || row.ipv4.trim() !== '' || row.ipv6.trim() !== ''
         ),
-        uid: user.uid,
+        uid: user.id,
         createdAt: initialData?.createdAt || serverTimestamp(),
       };
 
@@ -3474,7 +3454,7 @@ function ClienteForm({ onClose, user, initialData }: { onClose: () => void, user
   );
 }
 
-function AtivoForm({ onClose, user, clienteId, initialData }: { onClose: () => void, user: User, clienteId: string, initialData?: Ativo }) {
+function AtivoForm({ onClose, user, clienteId, initialData }: { onClose: () => void, user: any, clienteId: string, initialData?: Ativo }) {
   const [formData, setFormData] = useState({
     categoriaAcesso: initialData?.categoriaAcesso || 'Servers',
     nome: initialData?.nome || '',
@@ -3539,7 +3519,7 @@ function AtivoForm({ onClose, user, clienteId, initialData }: { onClose: () => v
       const ativoData = {
         ...formData,
         clienteId,
-        uid: user.uid,
+        uid: user.id,
         tags: initialData?.tags || [],
         createdAt: initialData?.createdAt || serverTimestamp(),
       };
@@ -4167,34 +4147,27 @@ function UserForm({ onClose, initialData, clientes }: { onClose: () => void, ini
         }
         await updateDoc(userRef, updateData);
       } else {
-        // Create new user
-        // We use a secondary app to avoid signing out the current admin
-        const secondaryApp = initializeApp(firebaseConfig, 'SecondaryRegistration');
-        const secondaryAuth = getAuth(secondaryApp);
+        // Create new user via Supabase
+        const { data, error: signUpError } = await supabase.auth.signUp({
+          email: formData.email,
+          password: formData.password,
+        });
+        if (signUpError) throw signUpError;
+        if (!data.user) throw new Error('Falha ao criar usuário');
         
-        try {
-          const userCredential = await createUserWithEmailAndPassword(secondaryAuth, formData.email, formData.password);
-          const newUid = userCredential.user.uid;
-          
-          // Create Firestore document
-          const userDocData: any = {
-            uid: newUid,
-            email: formData.email,
-            role: formData.role,
-            createdAt: serverTimestamp()
-          };
-          
-          if (formData.role === 'cliente') {
-            userDocData.clienteId = formData.clienteId;
-          }
-          
-          await setDoc(doc(db, 'users', newUid), userDocData);
-          
-          // Sign out from secondary app
-          await secondaryAuth.signOut();
-        } finally {
-          await deleteApp(secondaryApp);
+        // Create Firestore document for backward compat
+        const userDocData: any = {
+          uid: data.user.id,
+          email: formData.email,
+          role: formData.role,
+          createdAt: serverTimestamp()
+        };
+        
+        if (formData.role === 'cliente') {
+          userDocData.clienteId = formData.clienteId;
         }
+        
+        await setDoc(doc(db, 'users', data.user.id), userDocData);
       }
       onClose();
     } catch (error: any) {
@@ -4346,7 +4319,7 @@ function UserForm({ onClose, initialData, clientes }: { onClose: () => void, ini
   );
 }
 
-function CommandForm({ onClose, user, initialData, addToast }: { onClose: () => void, user: User, initialData?: Command, addToast: (msg: string, type?: 'success' | 'error') => void }) {
+function CommandForm({ onClose, user, initialData, addToast }: { onClose: () => void, user: any, initialData?: Command, addToast: (msg: string, type?: 'success' | 'error') => void }) {
   const [formData, setFormData] = useState({
     titulo: initialData?.titulo || '',
     descricao: initialData?.descricao || '',
@@ -4397,7 +4370,7 @@ function CommandForm({ onClose, user, initialData, addToast }: { onClose: () => 
       } else {
         await addDoc(collection(db, 'commands'), {
           ...data,
-          uid: user.uid,
+          uid: user.id,
           createdAt: serverTimestamp()
         });
         addToast('Novo comando adicionado com sucesso!');
