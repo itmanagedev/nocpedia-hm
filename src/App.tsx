@@ -969,7 +969,7 @@ export default function App() {
     );
   };
 
-  const Breadcrumbs = () => {
+  const renderBreadcrumbs = () => {
     const items = [
       { 
         label: 'Home', 
@@ -1459,7 +1459,7 @@ export default function App() {
     }
   };
 
-  const ConfiguracoesView = () => (
+  const renderConfiguracoesView = () => (
     <div className="flex-1 flex flex-col p-8 bg-white dark:bg-zinc-950 overflow-y-auto transition-colors duration-300 relative">
       <div className="absolute top-8 right-8 flex gap-2">
         <button 
@@ -1764,19 +1764,19 @@ export default function App() {
     });
   }, [clientes, deferredSearchClienteQuery]);
 
-  const AcessosView = () => {
-    const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+  // Hooks stay in App; render helpers preserve the focused input across updates.
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
 
-    const toggleCategory = (categoria: string) => {
-      setExpandedCategories(prev => {
-        const next = new Set(prev);
-        if (next.has(categoria)) next.delete(categoria);
-        else next.add(categoria);
-        return next;
-      });
-    };
+  const toggleCategory = (categoria: string) => {
+    setExpandedCategories(prev => {
+      const next = new Set(prev);
+      if (next.has(categoria)) next.delete(categoria);
+      else next.add(categoria);
+      return next;
+    });
+  };
 
-    // Memoized filtered assets for better performance
+  // Memoized filtered assets for better performance
   const filteredAtivos = useMemo(() => {
     if (!selectedCliente) return [];
     const query = deferredSearchAtivoQuery.toLowerCase().trim();
@@ -1802,7 +1802,8 @@ export default function App() {
     });
   }, [ativos, selectedCliente, deferredSearchAtivoQuery]);
 
-  const categories = ['Servers', 'Web Applications', 'Network Assets', 'Network Topologia', 'Upstream e Downstream', 'Clientes B2B', 'Outros'];
+  const renderAcessosView = () => {
+    const categories = ['Servers', 'Web Applications', 'Network Assets', 'Network Topologia', 'Upstream e Downstream', 'Clientes B2B', 'Outros'];
 
     const getInfraData = (cliente: Cliente) => {
       if (Array.isArray(cliente.infraestrutura) && cliente.infraestrutura.length > 0) {
@@ -2132,7 +2133,7 @@ export default function App() {
     );
   };
 
-  const HomeView = () => (
+  const renderHomeView = () => (
     <div className="flex-1 flex flex-col p-8 bg-white dark:bg-zinc-950 overflow-y-auto transition-colors duration-300 relative">
       <div className="absolute top-8 right-8 flex gap-2">
         <button 
@@ -2446,9 +2447,9 @@ export default function App() {
       {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
         {currentView === 'home' ? (
-          <HomeView />
+          renderHomeView()
         ) : currentView === 'configuracoes' ? (
-          <ConfiguracoesView />
+          renderConfiguracoesView()
         ) : (
           <>
             {/* Topbar */}
@@ -2540,11 +2541,11 @@ export default function App() {
 
             {/* Content Area */}
             {currentView === 'acessos' ? (
-              <AcessosView />
+              renderAcessosView()
             ) : (
               <div className="flex-1 overflow-y-auto p-6 bg-white dark:bg-zinc-950 transition-colors duration-300">
                 <div className="max-w-[1920px] mx-auto">
-                  <Breadcrumbs />
+                  {renderBreadcrumbs()}
                   <div className="flex items-center justify-between mb-8">
                     <div>
                       <h2 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white">
@@ -2859,7 +2860,7 @@ export default function App() {
                 setEditingCommand(cmd);
               }}
               addToast={addToast}
-              breadcrumbs={<Breadcrumbs />}
+              breadcrumbs={renderBreadcrumbs()}
             />
           )}
         </AnimatePresence>
@@ -2997,7 +2998,7 @@ function ClienteForm({ onClose, user, initialData, onSave }: { onClose: () => vo
         initial={{ y: 50, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: 50, opacity: 0 }}
-        className="bg-zinc-900 border border-zinc-800 w-full max-w-4xl rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]"
+        className="bg-zinc-900 text-zinc-100 [color-scheme:dark] border border-zinc-800 w-full max-w-4xl rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]"
       >
         <div className="p-6 border-b border-zinc-800 flex items-center justify-between bg-zinc-900/50 sticky top-0 z-10">
           <div className="flex items-center gap-3">
@@ -3428,7 +3429,7 @@ function AtivoForm({ onClose, user, clienteId, initialData, onSave }: { onClose:
         initial={{ y: 50, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: 50, opacity: 0 }}
-        className="bg-zinc-900 border border-zinc-800 w-full max-w-4xl rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]"
+        className="bg-zinc-900 text-zinc-100 [color-scheme:dark] border border-zinc-800 w-full max-w-4xl rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]"
       >
         <div className="p-6 border-b border-zinc-800 flex items-center justify-between bg-zinc-900/50 sticky top-0 z-10">
           <div className="flex items-center gap-3">
@@ -4048,7 +4049,7 @@ function UserForm({ onClose, initialData, clientes, onSave }: { onClose: () => v
         initial={{ y: 50, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: 50, opacity: 0 }}
-        className="bg-zinc-900 border border-zinc-800 w-full max-w-md rounded-3xl overflow-hidden shadow-2xl flex flex-col"
+        className="bg-zinc-900 text-zinc-100 [color-scheme:dark] border border-zinc-800 w-full max-w-md rounded-3xl overflow-hidden shadow-2xl flex flex-col"
       >
         <div className="p-6 border-b border-zinc-800 flex items-center justify-between bg-zinc-900/50">
           <div className="flex items-center gap-3">
@@ -4249,7 +4250,7 @@ function CommandForm({ onClose, user, initialData, addToast, onSave }: { onClose
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.9, opacity: 0 }}
-        className="bg-zinc-900 border border-zinc-800 w-full max-w-6xl rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]"
+        className="bg-zinc-900 text-zinc-100 [color-scheme:dark] border border-zinc-800 w-full max-w-6xl rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]"
       >
         <div className="p-6 border-b border-zinc-800 flex items-center justify-between bg-zinc-900/50">
           <h3 className="text-xl font-bold flex items-center gap-2">
